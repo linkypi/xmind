@@ -1110,6 +1110,7 @@ kubectl create clusterrolebinding kube-apiserver:kubelet-apis --clusterrole=syst
 
 export KUBECONFIG=$HOME/.kube/config
 
+# 查看集群状态
 kubectl cluster-info
 kubectl get componentstatuses
 kubectl get all --all-namespaces
@@ -1569,6 +1570,7 @@ named-checkzone "k8s.cc" /var/named/192.168.127.in-addr.arpa
 chown root:named /var/named/*.zone
 chmod 640 /var/named/*.zone
 
+systemctl enable named
 systemctl start named
 ```
 
