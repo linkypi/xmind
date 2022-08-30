@@ -1203,7 +1203,7 @@ source $HOME/.bash_profile
 
 ##### 8.4.1 生成证书
 
-```sh
+```shell
 cat > /opt/cert/kube-controller-manager-csr.json << "EOF"
 {
     "CN": "system:kube-controller-manager",
@@ -1244,21 +1244,34 @@ for i in master01 master02 master03;do scp /opt/cert/kube-controller-manager*.pe
 
 ##### 8.4.2 生成配置文件
 
-```sh
-kubectl config set-cluster kubernetes --certificate-authority=cert/ca.pem --embed-certs=true --server=https://192.168.127.117:16443 --kubeconfig=config/kube-controller-manager.config
+```shell
+cd /opt/kubernetes/server/bin
 
-kubectl config set-credentials system:kube-controller-manager --client-certificate=cert/kube-controller-manager.pem --client-key=cert/kube-controller-manager-key.pem --embed-certs=true --kubeconfig=config/kube-controller-manager.config
+kubectl config set-cluster kubernetes \
+--certificate-authority=cert/ca.pem \
+--embed-certs=true \
+--server=https://192.168.127.200:16443 \
+--kubeconfig=config/kube-controller-manager.config
 
-kubectl config set-context system:kube-controller-manager --cluster=kubernetes --user=system:kube-controller-manager --kubeconfig=config/kube-controller-manager.config
+kubectl config set-credentials \
+system:kube-controller-manager \
+--client-certificate=cert/kube-controller-manager.pem \
+--client-key=cert/kube-controller-manager-key.pem \
+--embed-certs=true --kubeconfig=config/kube-controller-manager.config
 
-kubectl config use-context system:kube-controller-manager --kubeconfig=config/kube-controller-manager.config
+kubectl config set-context system:kube-controller-manager \
+--cluster=kubernetes --user=system:kube-controller-manager \
+--kubeconfig=config/kube-controller-manager.config
+
+kubectl config use-context system:kube-controller-manager \
+--kubeconfig=config/kube-controller-manager.config
 ```
 
 ##### 8.4.3 创建启动脚本
 
 > 注意：参数 --cluster-signing-xxx 用于为 kubelet 颁发证书时使用，与apiserver 保持一致
 
-```SH
+```SHe
 cat > /opt/kubernetes/server/bin/kube-controller-manager.sh << "EOF"
 #!/bin/sh
 ./kube-controller-manager \
@@ -1330,7 +1343,7 @@ kubectl get cs
 
 ##### 8.5.1 生成证书
 
-```sh
+```shell
 cat > /opt/cert/kube-scheduler-csr.json << "EOF"
 {
     "CN": "system:kube-scheduler",
@@ -1364,7 +1377,7 @@ for i in master01 master02 master03;do scp /opt/cert/kube-scheduler*.pem $i:/opt
 
 ##### 8.5.2 创建配置文件
 
-```sh
+```shell
 cd /opt/kubernetes/server/bin
 
 kubectl config set-cluster kubernetes --certificate-authority=cert/ca.pem --embed-certs=true --server=https://192.168.127.117:16443 --kubeconfig=config/kube-scheduler.config
@@ -1378,7 +1391,7 @@ kubectl config use-context system:kube-scheduler --kubeconfig=config/kube-schedu
 
 ##### 8.5.3 创建启动脚本
 
-```SH
+```shell
 cat > /opt/kubernetes/server/bin/kube-scheduler.sh << "EOF"
 #!/bin/sh
 ./kube-scheduler \
