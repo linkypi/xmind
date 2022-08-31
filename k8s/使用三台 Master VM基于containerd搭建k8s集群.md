@@ -258,6 +258,7 @@ gpasswd -a k8s docker
 ```shell
 yum install -y epel-release
 yum install -y supervisor
+
 systemctl enable supervisord 
 systemctl start supervisord
 
@@ -290,7 +291,9 @@ hostnamectl --static set-hostname  master110
 cd /root
 ssh-keygen -t rsa
 
-for i in master110 master120 master130 ;do ssh-copy-id -i /root/.ssh/id_rsa.pub $i;done
+# 分别在三台机器执行，服务器自身也需要复制！！
+for i in master110 master120 master130;\
+do ssh-copy-id -i /root/.ssh/id_rsa.pub $i;done
 
 #测试
 ssh -p 4956 master120
@@ -677,19 +680,22 @@ useradd -s /sbin/nologin -M etcd
 
 ```shell
 cd /opt
-get https://github.com/etcd-io/etcd/releases/download/v3.5.0/etcd-v3.5.0-linux-amd64.tar.gz
+wget https://github.com/etcd-io/etcd/releases/download/v3.5.0/etcd-v3.5.0-linux-amd64.tar.gz
 tar -xvf etcd-v3.5.0-linux-amd64.tar.gz
 mv etcd-v3.5.0-linux-amd64 etcd-v3.5.0
 
 # 创建相关目录
-mkdir -p /opt/etcd/cert /data/etcd /data/etcd/etcd-server /var/logs/etcd
+mkdir -p /opt/etcd/cert /data/etcd \
+/data/etcd/etcd-server /var/logs/etcd
 
 # 复制二进制文件
 cp /opt/etcd-v3.5.0/etcd* /opt/etcd
 
 # 进入master130证书目录将 master130 生成的证书复制到 etcd 相关目录
-for i in master110 master120 master130 ;do scp /opt/cert/ca*.pem $i:/opt/etcd/cert;done
-for i in master110 master120 master130 ;do scp /opt/cert/etcd-peer*.pem $i:/opt/etcd/cert;done
+for i in master110 master120 master130 ;\
+do scp /opt/cert/ca*.pem $i:/opt/etcd/cert;done
+for i in master110 master120 master130 ;\
+do scp /opt/cert/etcd-peer*.pem $i:/opt/etcd/cert;done
 ```
 
 首先设置etcd启动脚本：/opt/etcd/etcd-server-startup.sh
@@ -698,7 +704,7 @@ for i in master110 master120 master130 ;do scp /opt/cert/etcd-peer*.pem $i:/opt/
 > 
 > --name 参数需要与--initial-cluster中的节点名称一致
 > 
-> --enable-v2 不能少，因为flannel插件使用的是 V2 接口，而etcd从 v3.4 开始默认关闭了 v2 接口
+> --enable-v2 可以移除，flannel插件使用的是 V2 接口，而etcd从 v3.4 开始默认关闭了 v2 接口，若使用calico插件则可忽略
 
 ```bash
 # master110 
@@ -786,6 +792,7 @@ useradd -s /sbin/nologin -M etcd
 chown -R etcd.etcd /opt/etcd-v3.5.0/
 chown -R etcd.etcd /data/etcd/
 chown -R etcd.etcd /var/logs/etcd/
+chown -R etcd.etcd /opt/etcd/cert
 ```
 
 创建启动service：
@@ -1189,16 +1196,24 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
 ./kube-apiserver \
  --apiserver-count=3 \
  --advertise-address=192.168.127.110 \
- --enable-aggregator-routing=true \
  --audit-log-path=/var/logs/kubernetes/kube-apiserver/audit.log \
  --audit-policy-file=./config/audit.yml \
  --authorization-mode=RBAC,Node \
- --runtime-config=api/all=true \
  --enable-bootstrap-token-auth \
  --token-auth-file=config/token.csv \
+
+ # 由于后面 Metrics Server需要用到聚合功能，所以此处需要加上
+ # proxy-client 证书生成可参考第 12 章节
+ --enable-aggregator-routing=true \
+ --runtime-config=api/all=true \
+ --requestheader-allowed-names=aggregator \
  --requestheader-group-headers=X-Remote-Group \
  --requestheader-username-headers=X-Remote-User \
  --requestheader-extra-headers-prefix=X-Remote-Extra- \
+ --requestheader-client-ca-file=./cert/ca.pem \
+ --proxy-client-cert-file=./cert/proxy-client.pem \
+ --proxy-client-key-file=./cert/proxy-client-key.pem \
+
  --client-ca-file=./cert/ca.pem \
  --enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota \
  --etcd-cafile=./cert/ca.pem \
@@ -1228,16 +1243,24 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
 ./kube-apiserver \
  --apiserver-count=3 \
  --advertise-address=192.168.127.120 \
- --enable-aggregator-routing=true \
  --audit-log-path=/var/logs/kubernetes/kube-apiserver/audit.log \
  --audit-policy-file=./config/audit.yml \
  --authorization-mode=RBAC,Node \
- --runtime-config=api/all=true \
  --enable-bootstrap-token-auth \
  --token-auth-file=config/token.csv \
+
+ # 由于后面 Metrics Server需要用到聚合功能，所以此处需要加上
+ # proxy-client 证书生成可参考第 12 章节
+ --enable-aggregator-routing=true \
+ --runtime-config=api/all=true \
+ --requestheader-allowed-names=aggregator \
  --requestheader-group-headers=X-Remote-Group \
  --requestheader-username-headers=X-Remote-User \
  --requestheader-extra-headers-prefix=X-Remote-Extra- \
+ --requestheader-client-ca-file=./cert/ca.pem \
+ --proxy-client-cert-file=./cert/proxy-client.pem \
+ --proxy-client-key-file=./cert/proxy-client-key.pem \
+
  --client-ca-file=./cert/ca.pem \
  --enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota \
  --etcd-cafile=./cert/ca.pem \
@@ -1267,16 +1290,24 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
 ./kube-apiserver \
  --apiserver-count=3 \
  --advertise-address=192.168.127.130 \
- --enable-aggregator-routing=true \
  --audit-log-path=/var/logs/kubernetes/kube-apiserver/audit.log \
  --audit-policy-file=./config/audit.yml \
  --authorization-mode=RBAC,Node \
- --runtime-config=api/all=true \
  --enable-bootstrap-token-auth \
  --token-auth-file=config/token.csv \
+
+ # 由于后面 Metrics Server需要用到聚合功能，所以此处需要加上
+ # proxy-client 证书生成可参考第 12 章节
+ --enable-aggregator-routing=true \
+ --runtime-config=api/all=true \
+ --requestheader-allowed-names=aggregator \
  --requestheader-group-headers=X-Remote-Group \
  --requestheader-username-headers=X-Remote-User \
  --requestheader-extra-headers-prefix=X-Remote-Extra- \
+ --requestheader-client-ca-file=./cert/ca.pem \
+ --proxy-client-cert-file=./cert/proxy-client.pem \
+ --proxy-client-key-file=./cert/proxy-client-key.pem \
+
  --client-ca-file=./cert/ca.pem \
  --enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota \
  --etcd-cafile=./cert/ca.pem \
@@ -2772,6 +2803,43 @@ netstat -ltunp|grep 10255|awk '{print $7}'|awk -F "/" '{system("echo "$1";kill -
 
 1. etcd 集群出错，删除etcd所有数据后重启(<mark>切记不能这么做</mark>， 可以先做备份)，导致apiserver也重启。重启完成后 kubectl get pods -A 无数据，此时需要重启kubelet
 
-#### 15. 待办
+端口无法连通问题：
 
-1. 部署完成集群后备份etcd数据，然后再恢复，查看恢复情况
+1. 查看防火墙是否已关闭
+   
+   ```shell
+   systemctl status iptables.service 
+   systemctl status firewalld.service
+   ```
+
+2. 若程序运行在容器中，则确认容器运行时使用的docker还是containerd, 若是docker 则可以在docker daemon配置 --iptables = false来关闭 iptables。 若不想通过修改 docker daemon 的方式则只能修改 iptables配置文件：
+   
+   <mark>永久修改</mark>：
+   
+    vim /etc/sysconfig/iptables
+   
+   ```shell
+   -A INPUT -p tcp -m tcp --dport 111 -j ACCEPT
+   -A INPUT -p udp -m udp --dport 111 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 2049 -j ACCEPT
+   -A INPUT -p udp -m udp --dport 2049 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 4001:4004 -j ACCEPT
+   -A INPUT -p udp -m udp --dport 4001:4004 -j ACCEPT
+   ```
+   
+   <mark>临时修改</mark>
+   
+   ```
+   iptables-save
+   iptables -I INPUT -p tcp -m tcp --dport 2380 -j ACCEPT
+   iptables-save
+   ```
+   
+   重启
+   
+   ```shell
+   service iptables restart
+   service iptables save
+   ```
+
+#### 15. 待办
