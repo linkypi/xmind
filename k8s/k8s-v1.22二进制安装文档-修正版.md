@@ -1,35 +1,35 @@
 ### 1. 主机规划
 
-|     IP地址      | 机器名称 |  机器配置   | 机器角色 |                           安装软件                           |
-| :-------------: | :------: | :---------: | :------: | :----------------------------------------------------------: |
-| 192.168.127.10  | master01 | 2C  2G  30G |  master  | kube-apiserver、kube-controller-manager、kube-scheduler、etcd、haproxy、keepalived、 |
-| 192.168.127.20  | master02 | 2C  2G  30G |  master  | kube-apiserver、kube-controller-manager、kube-scheduler、etcd、haproxy、keepalived、 |
-| 192.168.127.30  | master03 | 2C  2G  30G |  master  | kube-apiserver、kube-controller-manager、kube-scheduler、etcd、haproxy、keepalived、 |
-| 192.168.127.40  |  node01  | 2C  2G  30G |   node   |                     kubelet、kube-proxy                      |
-| 192.168.127.50  |  node02  | 2C  2G  30G |   node   |                     kubelet、kube-proxy                      |
-| 192.168.127.60  |  node03  | 2C  2G  30G |   node   |                     kubelet、kube-proxy                      |
-| 192.168.127.210 | proxy01  | 2C  2G  30G |  proxy   |                          keepalived                          |
-| 192.168.127.220 | proxy02  | 2C  2G  30G |  proxy   |                          keepalived                          |
-| 192.168.127.180 |  harbor  | 2C  2G  30G | 容器仓库 |     docker, harbor, cfssl, bind. 证书生成，域名解析服务      |
-| 192.168.127.117 |    /     |      /      |  虚拟IP  | 由 HAProxy 和 keepalived 组成的 LB，由192.168.127.117统一路由到其他三个主节点 |
+| IP地址            | 机器名称     | 机器配置        | 机器角色   | 安装软件                                                                           |
+|:---------------:|:--------:|:-----------:|:------:|:------------------------------------------------------------------------------:|
+| 192.168.127.10  | master01 | 2C  2G  30G | master | kube-apiserver、kube-controller-manager、kube-scheduler、etcd、haproxy、keepalived、 |
+| 192.168.127.20  | master02 | 2C  2G  30G | master | kube-apiserver、kube-controller-manager、kube-scheduler、etcd、haproxy、keepalived、 |
+| 192.168.127.30  | master03 | 2C  2G  30G | master | kube-apiserver、kube-controller-manager、kube-scheduler、etcd、haproxy、keepalived、 |
+| 192.168.127.40  | node01   | 2C  2G  30G | node   | kubelet、kube-proxy                                                             |
+| 192.168.127.50  | node02   | 2C  2G  30G | node   | kubelet、kube-proxy                                                             |
+| 192.168.127.60  | node03   | 2C  2G  30G | node   | kubelet、kube-proxy                                                             |
+| 192.168.127.210 | proxy01  | 2C  2G  30G | proxy  |                                                                                |
+| 192.168.127.220 | proxy02  | 2C  2G  30G | proxy  | keepalived                                                                     |
+| 192.168.127.180 | harbor   | 2C  2G  30G | 容器仓库   | docker, harbor, cfssl, bind. 证书生成，域名解析服务                                       |
+| 192.168.127.117 | /        | /           | 虚拟IP   | 由 HAProxy 和 keepalived 组成的 LB，由192.168.127.117统一路由到其他三个主节点                     |
 
 ### 2. 软件版本
 
-|                             软件                             |            版本            |
-| :----------------------------------------------------------: | :------------------------: |
-|                       centos-7.9.2009                        | 5.12.9-1.el7.elrepo.x86_64 |
-| kube-apiserver、kube-controller-manager、<br />kube-scheduler、kubelet、kube-proxy |          v 1.22.2          |
-|                             etcd                             |           v 3.5            |
-|                           coredns                            |                            |
-|                            docker                            |          v 20.18           |
-|                          keepalived                          |          v 1.3.5           |
+| 软件                                                                             | 版本                         |
+|:------------------------------------------------------------------------------:|:--------------------------:|
+| centos-7.9.2009                                                                | 5.12.9-1.el7.elrepo.x86_64 |
+| kube-apiserver、kube-controller-manager、<br />kube-scheduler、kubelet、kube-proxy | v 1.22.2                   |
+| etcd                                                                           | v 3.5                      |
+| coredns                                                                        |                            |
+| docker                                                                         | v 20.18                    |
+| keepalived                                                                     | v 1.3.5                    |
 
 ### 3. 网络分配
 
-| 网段信息 |     配置     |
-| :------: | :----------: |
-|   Pod    | 172.7.0.0/16 |
-| Service  | 10.96.0.0/16 |
+| 网段信息    | 配置           |
+|:-------:|:------------:|
+| Pod     | 172.7.0.0/16 |
+| Service | 10.96.0.0/16 |
 
 ### 4. 构建基础VM
 
@@ -146,9 +146,27 @@ crontab -e
 0 */1 * * * ntpdate time1.aliyun.com
 ```
 
-
-
 #### 4.6 k8s内核优化
+
+```shell
+yum install ipvsadm ipset sysstat conntrack libseccomp -y
+
+cat >> /etc/modules-load.d/ipvs.conf <<EOF
+cat 
+ip_vs
+ip_vs_rr
+ip_vs_wrr
+ip_vs_sh
+nf_conntrack
+ip_tables
+ip_set
+xt_set
+ipt_set
+ipt_rpfilter
+ipt_REJECT
+ipip
+EOF
+```
 
 ```sh
 cat <<EOF > /etc/sysctl.d/k8s.conf
@@ -191,7 +209,34 @@ lsmod | grep --color=auto -e ip_vs -e nf_conntrack
 lsmod | egrep 'br_netfilter | overlay'
 ```
 
-#### 4.7 安装后台进程管理器 supervisor
+#### 4.7 创建 k8s 用户
+
+```shell
+#创建k8s用户
+useradd -m k8s
+
+#创建k8s用户密码 k8s
+sh -c 'echo [k8s] |passwd k8s --stdin'
+
+#修改visudo权限
+visudo
+#去掉%wheel ALL=(ALL) NOPASSWD: ALL这行的注释
+
+#查看是否更改成功
+grep '%wheel.*NOPASSWD: ALL' /etc/sudoers
+
+#将k8s用户归到wheel组
+gpasswd -a k8s wheel
+
+#查看用户
+id k8s
+
+#在每台机器上添加 docker 账户，将 k8s 账户添加到 docker 组中，同时配置 dockerd 参数
+useradd -m docker
+gpasswd -a k8s docker
+```
+
+#### 4.8 安装后台进程管理器 supervisor
 
 ```sh
 yum install -y epel-release
@@ -247,7 +292,7 @@ ssh -p 4956 master02
 
 ```
 # 首先安装 epel 否则无法找到 go
-yum install epel-release
+yum install epel-release -y
 yum install go -y
 ```
 
@@ -408,6 +453,17 @@ backend k8s-master
  server  master01  192.168.127.10:6443 check
  server  master02  192.168.127.20:6443 check
  server  master03  192.168.127.30:6443 check
+
+listen admin_stats              #web页面的listen
+   stats   enable                  #开启统计功能
+   bind    *:8888                  #监听的ip端口号
+   mode    http
+   stats   refresh 30s             #(可选)统计页面自动刷新时间
+   stats   uri  /haproxy           #访问的uri   ip:8888/haproxy
+   stats   realm haproxy_admin     #(可选)密码框提示文本
+   stats   auth admin:admin        #(可选)认证用户名和密码
+   stats   hide-version            #(可选)隐藏HAProxy的版本号
+   stats   admin if TRUE           #管理功能，需要开启stats auth成功登陆后可通过webui管理节点
 EOF
 ```
 
@@ -627,9 +683,9 @@ scp harbor:/opt/cert/etcd-peer-key.pem .
 首先设置etcd启动脚本：/opt/etcd/etcd-server-startup.sh 
 
 > 注意最后的 \ 后面不能有空格
->
+> 
 > --name 参数需要与--initial-cluster中的节点名称一致
->
+> 
 > --enable-v2 不能少，因为flannel插件使用的是 V2 接口，而etcd从 v3.4 开始默认关闭了 v2 接口
 
 ```bash
@@ -761,8 +817,6 @@ rm -fr server/bin/*.tar
 rm -fr server/bin/*_tag
 ```
 
-
-
 ##### 8.3.2 签发 apiserver 请求etcd使用的 client 证书
 
 该证书是为apiserver与etcd集群通讯使用的证书， apiserver作为 client端， etcd作为server端。进入harbor机器，创建生成证书签名请求的json文件 /opt/cert/etcd-client-csr.json：
@@ -823,7 +877,7 @@ cat > /opt/cert/apiserver-server-csr.json << "EOF"
        "192.168.127.180",
        "192.168.127.190",
        "192.168.127.200",
-	   "192.168.127.210",
+       "192.168.127.210",
        "192.168.127.220"
     ],
     "key": {
@@ -942,7 +996,7 @@ echo "`head -c 16 /dev/urandom | od -An -t x | tr -d ' '`,kubelet-bootstrap,1000
 创建apiserver 启动脚本 /opt/kubernetes/server/bin/kube-apiserver.sh ：
 
 > 注意最后的 \ 后面不能有空格
->
+> 
 > 如果同时提供了 `--client-ca-file` 和 `--requestheader-client-ca-file`， 则首先检查 `--requestheader-client-ca-file` CA，然后再检查 `--client-ca-file`。 通常，这些选项中的每一个都使用不同的 CA（根 CA 或中间 CA）。 常规客户端请求与 `--client-ca-file` 相匹配，而聚合请求要与 `--requestheader-client-ca-file` 相匹配。 但是，如果两者都使用同一个 CA，则通常会通过 `--client-ca-file` 传递的客户端请求将失败，因为 CA 将与 `--requestheader-client-ca-file` 中的 CA 匹配，但是通用名称 `CN=` 将不匹配 `--requestheader-allowed-names` 中可接受的通用名称之一。 这可能导致你的 kubelet 和其他控制平面组件以及最终用户无法向 Kubernetes apiserver 认证。
 
 - `--requestheader-client-ca-file`：用于签名 `--proxy-client-cert-file` 和 `--proxy-client-key-file` 指定的证书；在启用了 metric aggregator 时使用；暂时去除
@@ -982,16 +1036,15 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
  --tls-cert-file=./cert/apiserver-server.pem \
  --tls-private-key-file=./cert/apiserver-server-key.pem \
  --anonymous-auth=false \
+ --allow-privileged=true \
  --v=2
  EOF
 ```
 
-
-
-````
+```
 chmod +x kube-apiserver.sh 
 mkdir -p /data/logs/kubernetes/kube-apiserver
-````
+```
 
 创建apiserver对应 的supervisor启动文件 /usr/lib/systemd/system/kube-apiserver.service :
 
@@ -1091,17 +1144,17 @@ kubectl config set-cluster kubernetes \
  --embed-certs=true \
  --server=https://192.168.127.117:16443 \
  --kubeconfig=/opt/kubernetes/server/bin/config/admin.config
- 
+
  kubectl config set-credentials admin \
  --client-certificate=/opt/kubernetes/server/bin/cert/kubectl-admin.pem \
  --client-key=/opt/kubernetes/server/bin/cert/kubectl-admin-key.pem \
  --embed-certs=true \
  --kubeconfig=/opt/kubernetes/server/bin/config/admin.config
- 
+
  kubectl config set-context kubernetes --cluster=kubernetes --user=admin --kubeconfig=/opt/kubernetes/server/bin/config/admin.config
 
 kubectl config use-context kubernetes --kubeconfig=/opt/kubernetes/server/bin/config/admin.config
- 
+
 mkdir ~/.kube
 cp /opt/kubernetes/server/bin/config/admin.config ~/.kube/config
 
@@ -1150,7 +1203,7 @@ source $HOME/.bash_profile
 
 ##### 8.4.1 生成证书
 
-```sh
+```shell
 cat > /opt/cert/kube-controller-manager-csr.json << "EOF"
 {
     "CN": "system:kube-controller-manager",
@@ -1185,27 +1238,40 @@ cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=peer
 for i in master01 master02 master03;do scp /opt/cert/kube-controller-manager*.pem $i:/opt/kubernetes/server/bin/cert;done
 ```
 
->CN 为 system:kube-controller-manager , O 为 system:kube-controller-manager
->
->kubernetes 内置的 ClusterRoleBindings system:kube-controller-manager 赋予 kube-controller-manager 工作所需的权限
+> CN 为 system:kube-controller-manager , O 为 system:kube-controller-manager
+> 
+> kubernetes 内置的 ClusterRoleBindings system:kube-controller-manager 赋予 kube-controller-manager 工作所需的权限
 
 ##### 8.4.2 生成配置文件
 
-```sh
-kubectl config set-cluster kubernetes --certificate-authority=cert/ca.pem --embed-certs=true --server=https://192.168.127.117:16443 --kubeconfig=config/kube-controller-manager.config
+```shell
+cd /opt/kubernetes/server/bin
 
-kubectl config set-credentials system:kube-controller-manager --client-certificate=cert/kube-controller-manager.pem --client-key=cert/kube-controller-manager-key.pem --embed-certs=true --kubeconfig=config/kube-controller-manager.config
+kubectl config set-cluster kubernetes \
+--certificate-authority=cert/ca.pem \
+--embed-certs=true \
+--server=https://192.168.127.200:16443 \
+--kubeconfig=config/kube-controller-manager.config
 
-kubectl config set-context system:kube-controller-manager --cluster=kubernetes --user=system:kube-controller-manager --kubeconfig=config/kube-controller-manager.config
+kubectl config set-credentials \
+system:kube-controller-manager \
+--client-certificate=cert/kube-controller-manager.pem \
+--client-key=cert/kube-controller-manager-key.pem \
+--embed-certs=true --kubeconfig=config/kube-controller-manager.config
 
-kubectl config use-context system:kube-controller-manager --kubeconfig=config/kube-controller-manager.config
+kubectl config set-context system:kube-controller-manager \
+--cluster=kubernetes --user=system:kube-controller-manager \
+--kubeconfig=config/kube-controller-manager.config
+
+kubectl config use-context system:kube-controller-manager \
+--kubeconfig=config/kube-controller-manager.config
 ```
 
 ##### 8.4.3 创建启动脚本
 
->注意：参数 --cluster-signing-xxx 用于为 kubelet 颁发证书时使用，与apiserver 保持一致
+> 注意：参数 --cluster-signing-xxx 用于为 kubelet 颁发证书时使用，与apiserver 保持一致
 
-```SH
+```SHe
 cat > /opt/kubernetes/server/bin/kube-controller-manager.sh << "EOF"
 #!/bin/sh
 ./kube-controller-manager \
@@ -1275,9 +1341,9 @@ kubectl get cs
 
 #### 8.5 部署 kube-schesuler
 
- ##### 8.5.1 生成证书
+##### 8.5.1 生成证书
 
-```sh
+```shell
 cat > /opt/cert/kube-scheduler-csr.json << "EOF"
 {
     "CN": "system:kube-scheduler",
@@ -1311,7 +1377,7 @@ for i in master01 master02 master03;do scp /opt/cert/kube-scheduler*.pem $i:/opt
 
 ##### 8.5.2 创建配置文件
 
-```sh
+```shell
 cd /opt/kubernetes/server/bin
 
 kubectl config set-cluster kubernetes --certificate-authority=cert/ca.pem --embed-certs=true --server=https://192.168.127.117:16443 --kubeconfig=config/kube-scheduler.config
@@ -1325,7 +1391,7 @@ kubectl config use-context system:kube-scheduler --kubeconfig=config/kube-schedu
 
 ##### 8.5.3 创建启动脚本
 
-```SH
+```shell
 cat > /opt/kubernetes/server/bin/kube-scheduler.sh << "EOF"
 #!/bin/sh
 ./kube-scheduler \
@@ -1389,14 +1455,14 @@ etcd-1               Healthy   {"health":"true","reason":""}
 
 至此，由三台master主机组成的高可用集群已经部署完成，外部统一使用虚拟IP 192.168.127.117 进行访问
 
-|     IP地址      | 机器名称 |  机器配置   | 机器角色 |                           安装软件                           |
-| :-------------: | :------: | :---------: | :------: | :----------------------------------------------------------: |
-| 192.168.127.10  | master01 | 2C  2G  30G |  master  | kube-apiserver、kube-controller-manager、kube-scheduler、etcd |
-| 192.168.127.20  | master02 | 2C  2G  30G |  master  | kube-apiserver、kube-controller-manager、kube-scheduler、etcd |
-| 192.168.127.30  | master03 | 2C  2G  30G |  master  | kube-apiserver、kube-controller-manager、kube-scheduler、etcd |
-| 192.168.127.117 |    /     |      /      |  虚拟IP  | 由 HAProxy 和 keepalived 组成的 LB，由192.168.127.117统一路由到其他三个主节点 |
+| IP地址            | 机器名称     | 机器配置        | 机器角色   | 安装软件                                                       |
+|:---------------:|:--------:|:-----------:|:------:|:----------------------------------------------------------:|
+| 192.168.127.10  | master01 | 2C  2G  30G | master | kube-apiserver、kube-controller-manager、kube-scheduler、etcd |
+| 192.168.127.20  | master02 | 2C  2G  30G | master | kube-apiserver、kube-controller-manager、kube-scheduler、etcd |
+| 192.168.127.30  | master03 | 2C  2G  30G | master | kube-apiserver、kube-controller-manager、kube-scheduler、etcd |
+| 192.168.127.117 | /        | /           | 虚拟IP   | 由 HAProxy 和 keepalived 组成的 LB，由192.168.127.117统一路由到其他三个主节点 |
 
-### 9. 部署harbor 
+### 9. 部署harbor
 
 为了将harbor服务独立，所以需要基于前面已经配置好的虚拟机再复制一个VM出来单独部署harbor，IP 为 168.127.200. 接下来到 harbor [官网](https://github.com/goharbor/harbor/releases) 下载安装包 离线安装包，然后在 /opt创建文件夹  /opt/harbor  并将离线包解压到此目录
 
@@ -1407,7 +1473,7 @@ tar xvf harbor-offline-installer-v2.3.3.tgz -C /opt
 解压完成后进入文件夹harbor, 把 harbor.tml.tmpl 复制一份配置文件 harbor.yml, 并修改如下内容:
 
 > 注意先创建文件夹 /data/harbor, /data/habor/logs。
->
+> 
 > 通知注意去掉 https 部分
 
 ```sh
@@ -1428,7 +1494,6 @@ data_volume: /data/harbor
 
 log:
    location: /data/harbor/logs
-
 ```
 
 由于harbor需要docker-compose支持，所以需要安装 docker-compose
@@ -1484,7 +1549,7 @@ dnssec-validation no;
 
 设置完成后使用命令 named-checkconf 检查是否配置成功
 
-##### 9.1.1 配置正反向解析文件 
+##### 9.1.1 配置正反向解析文件
 
 配置正反向解析域，进入 /etc/named.rfc1912.zones
 
@@ -1576,14 +1641,17 @@ systemctl start named
 
 #### 2.3 正反向测试
 
-首先安装 dig正向解析工具
+为了在三台master主机以及三台worker主机都可以正常解析域名，故需要在这六台主机设置DNS，首先安装 dig正向解析工具
 
 ```sh
  yum install bind-utils -y
 ```
 
 ```sh
-cp /etc/sysconfig/network-scripts/ifcfg-ens33 /etc/sysconfig/network-scripts/ifcfg-ens33 .bak
+# 设置dns，分别在三台master及三台node机器执行脚本
+
+cp /etc/sysconfig/network-scripts/ifcfg-ens33 /etc/sysconfig/network-scripts/ifcfg-ens33.bak
+
 cat >> /etc/sysconfig/network-scripts/ifcfg-ens33 << "EOF"
 
 DNS1="192.168.127.180"
@@ -1592,10 +1660,6 @@ EOF
 
 systemctl restart network
 ```
-
-
-
-git
 
 正向测试：
 
@@ -1675,7 +1739,7 @@ cat > kubelet-csr.json << "EOF"
        "192.168.127.180",
        "192.168.127.190",
        "192.168.127.200",
-	   "192.168.127.210",
+       "192.168.127.210",
        "192.168.127.220"
     ],
     "key": {
@@ -1735,8 +1799,6 @@ kubectl config use-context default --kubeconfig=config/kubelet-bootstrap.config
 kubectl create clusterrolebinding kubelet-bootstrap --clusterrole=system:node-bootstrapper --user=kubelet-bootstrap --kubeconfig=config/kubelet-bootstrap.config
 ```
 
-
-
 ```sh
 # 创建配置文件
 cat > config/kubelet.json << "EOF"
@@ -1768,7 +1830,7 @@ cat > config/kubelet.json << "EOF"
   "hairpinMode": "promiscuous-bridge",
   "serializeImagePulls": false,
   "clusterDomain": "cluster.local.",
-  "clusterDNS": ["10.12.0.2"]
+  "clusterDNS": ["192.168.0.2"]
 }
 EOF
 ```
@@ -1855,8 +1917,6 @@ for i in node01 node02 node03;do scp kubelet.sh $i:/opt/kubernetes/bin/;done
 
 for i in node01 node02 node03;do scp /etc/supervisord.d/kubelet.ini $i:/etc/supervisord.d/;done
 ```
-
-
 
 ##### 10.2.3 部署worker 节点
 
@@ -2027,7 +2087,52 @@ for i in node01 node02 node03;do scp /etc/supervisord.d/kube-proxy.ini $i:/etc/s
 supervisorctl update
 ```
 
-### 11. 安装网络插件 flannel
+### 11. 安装网络插件 Calico (<mark>推荐</mark>)
+
+#### 11.1 下载安装文件
+
+在任意一个master节点执行以下命令
+
+```shell
+wget https://projectcalico.docs.tigera.io/archive/v3.21/manifests/calico.yaml
+```
+
+下载完成后, 首先修改配置文件。在文件中搜索并找到 CALICO_IPV4POOL_CIDR 的注释行，将前后两行注释打开，并将对应的value修改为此前规划好的Pod网段：
+
+```yaml
+3683    - name: CALICO_IPV4POOL_CIDR
+3684      value: "172.7.0.0/16"
+```
+
+启动：
+
+```shell
+kubectl apply -f  calico.yaml
+```
+
+启动后遇到错误：
+
+```shellsession
+The DaemonSet "calico-node" is invalid: 
+* spec.template.spec.containers[0].securityContext.privileged: Forbidden: disallowed by cluster policy
+* spec.template.spec.initContainers[0].securityContext.privileged: Forbidden: disallowed by cluster policy
+* spec.template.spec.initContainers[1].securityContext.privileged: Forbidden: disallowed by cluster policy
+* spec.template.spec.initContainers[2].securityContext.privileged: Forbidden: disallowed by cluster policy
+```
+
+这是因为apiserver启动时没有增加参数 --allow-privileged=true。在kubet-apiserver脚本中配置该参数后重新启动即可。Calico启动完成后可以通过命令查看状态：
+
+```shell
+kubectl get pods -n kube-system
+
+# 通过该命令看不到具体原因
+kubectl get pods -n kube-system -o wide
+
+
+kubectl describe pod calico-kube-controllers-5b68c4d876-tb25t -n kube-system
+```
+
+### 12. 安装网络插件 flannel (不推荐)
 
 到 flannel 官网 下载安装包后解压：
 
@@ -2038,7 +2143,7 @@ ln -s /opt/flannel-v0.14.0 /opt/flannel
 cd flannel
 ```
 
-#### 11.1 将网络信息添加到 etcd
+#### 12.1 将网络信息添加到 etcd
 
 进入master任一节点设置
 
@@ -2052,8 +2157,7 @@ cd flannel
 etcdctl --cacert=/opt/etcd/cert/ca.pem --cert=/opt/etcd/cert/etcd-peer.pem --key=/opt/etcd/cert/etcd-peer-key.pem  --endpoints=https://192.168.127.10:2379,https://192.168.127.20:2379,https://192.168.127.30:2379 put /coreos.com/network/config '{"Network": "172.7.0.0/16", "SubnetLen": 24, "Backend": {"Type": "vxlan"}}'
 ```
 
-#### 11.2 创建 flannel 启动脚本
-
+#### 12.2 创建 flannel 启动脚本
 
 > 由于使用的是systemd , 故 脚本使用到的文件必须是绝对路径，否则报错
 
@@ -2147,7 +2251,7 @@ ETCDCTL_API=2 etcdctl --ca-file=/opt/etcd/cert/ca.pem --cert-file=/opt/etcd/cert
 ......
 ```
 
-#### 11.3 调整docker服务
+#### 12.3 调整docker服务
 
 为了可以让docker0网桥可以顺利接入预先设定的网段，故需要将flannel生成的配置适用到 docker 中 。编辑文件 /usr/lib/systemd/system/docker.service, 增加 DOCKER_NETWORK_OPTIONS 及  EnvironmentFile=/run/flannel/docker
 
@@ -2173,13 +2277,13 @@ systemctl start flanneld
     link/ether 02:42:cb:ce:05:de brd ff:ff:ff:ff:ff:ff
     inet 172.7.21.1/24 brd 172.7.21.255 scope global docker0
        valid_lft forever preferred_lft forever
-      
+
 # node02 
 6: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default 
     link/ether 02:42:0d:ad:87:bf brd ff:ff:ff:ff:ff:ff
     inet 172.7.92.1/24 brd 172.7.92.255 scope global docker0
        valid_lft forever preferred_lft forever
-       
+
 # node03 
 6: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default 
     link/ether 02:42:6a:8c:d7:61 brd ff:ff:ff:ff:ff:ff
@@ -2195,20 +2299,18 @@ docker run -it --name busybox busybox
 
 进入容器后通过 ifconfig 查看不同容器IP ，然后在其中一个容器ping其他容器的IP即可发现可以联通
 
-### 12 工作节点部署 kubectl
+### 13 工作节点部署 kubectl
 
-````sh
+```sh
 mkdir -p /root/.kube
 for i in master01 master02 master03;do scp $i:/root/.kube/config /root/.kube/config;done
 ln -s /opt/kubernetes/bin/kubectl /usr/bin/kubectl
 
 # /etc/profile 设置环境变量
 export KUBECONFIG=$HOME/.kube/config
-````
+```
 
-
-
-### 13 工作节点配置 CNI
+### 14 工作节点配置 CNI
 
 参考：
 
@@ -2216,12 +2318,10 @@ export KUBECONFIG=$HOME/.kube/config
 
 CNI（Container Network Interface）是 CNCF 旗下的一个项目，最早是由 CoreOS 发起的容器网络规范，由一组用于配置 Linux 容器的网络接口的规范和库组成。CNI的工作流程如下：
 
-- 在集群中发起创建Pod请求，apiserver接收到请求到请求会交给scheduler将请求调度到具体节点
+- 在集群中发起创建Pod请求，apiserver接收到请求会交给scheduler将请求调度到具体节点
 - kubelet监听到Pod创建时会为其先创建pause容器以生成ipc, utc, net等命名空间，Pod中的所有容器共用该pause容器
-- 等到创建网络时时会先读取配置目录中的配置 xxx.conf，该配置文件指明了使用哪一个网络插件
+- 等到创建网络时会先读取配置目录中的配置 xxx.conf，该配置文件指明了使用哪一个网络插件
 - 然后执行具体的CNI插件，由该插件进入Pod的pause容器网络空间去配置Pod网络
-
-
 
 下载 [cni 插件](https://github.com/containernetworking/plugins/releases/download/v1.0.1/cni-plugins-linux-amd64-v1.0.1.tgz)，并把二进制文件放到 /opt/cni/bin 目录
 
@@ -2241,7 +2341,7 @@ kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documen
 ```sh
    - /etc/kube-flannel/cni-conf.json
     - /etc/cni/net.d/10-flannel.conflist
-    
+
 [root@node03 ~]# kubectl get pods --all-namespaces
 NAMESPACE     NAME                    READY   STATUS     RESTARTS   AGE
 kube-system   kube-flannel-ds-4kh4m   0/1     Init:0/1   0          8m27s
@@ -2265,15 +2365,9 @@ Error from server (BadRequest): container "kube-flannel" in pod "kube-flannel-ds
 
 # 配置完成域名解析服务后重新创建 Pod
 kubectl replace --force -f kube-flannel.yml
-
 ```
 
 重建后通过 describe 发现有warning， 
-
-
-
-
-
 
 ```sh
 cat > /etc/kube-flannel/cni-conf.json << "EOF"
@@ -2341,53 +2435,19 @@ EOF
 }
 ```
 
+### 15. Trouble shooting
+
+#### 15.1 断电重启导致 etcd 及 apiserver 无法启动
+
+```shell
+netstat -ltunp|grep 6443
 
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+mkdir -p $HOME/.kube
+cp -i /opt/kubernetes/server/bin/config/admin.config $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+```
