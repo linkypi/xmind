@@ -95,6 +95,8 @@ yum --enablerepo=elrepo-kernel install kernel-lt
 
 内核安装完成后需要设置默认启动项/etc/default/grub 为其增加参数 GRUB_DEFAULT=0 ，即GRUB 初始化页面的第一个内核将作为默认内核。：
 
+vim /etc/default/grub
+
 ```
 GRUB_TIMEOUT=5
 GRUB_DEFAULT=0
@@ -188,6 +190,7 @@ lsmod | grep -e ip_vs -e nf_conntrack
 ```shell
 cat <<EOF > /etc/sysctl.d/k8s.conf
 net.ipv4.ip_forward = 1
+net.ipv4.ip_nonlocal_bind=1
 net.bridge.bridge-nf-call-iptables = 1
 net.bridge.bridge-nf-call-ip6tables = 1
 fs.may_detach_mounts = 1
@@ -261,10 +264,15 @@ yum install -y supervisor
 
 systemctl enable supervisord 
 systemctl start supervisord
+```
 
-# 最好将 supervisor 配置文件中的进程异常自动重试设置为false
-# 否则使用 supervisorctl 停止进程后会自动重启（重试三次），及其蛋疼
-# 更重要的是重启完成后没有更新进程状态，通过status还是历史状态
+ <mark>该部署可以在具体的service配置中设置，无效在全局设置</mark>。最好将 supervisor 配置文件中的进程异常自动重试设置为false
+
+否则使用 supervisorctl 停止进程后会自动重启（重试三次），及其蛋疼
+
+更重要的是重启完成后没有更新进程状态，通过status还是历史状态
+
+```shell
 vim /etc/supervisord.conf
 
 autorestart=false              ; retstart at unexpected quit (default: true)
@@ -486,14 +494,16 @@ EOF
 
 ##### 8.1.2 配置 keepalived
 
-注意三台主机需要设置不同的优先级 priority ，这样 keepalived 才会自动选择其中一台提供服务
+注意三台主机需要设置不同的优先级 priority ，这样 keepalived 才会自动选择其中一台提供服务。
+
+> 注意： router_id 在局域网内需保证唯一，virtual_router_id 主机及备机需要保持一致，主机的 priority 需要高于备机。所有主机的virtual_ipaddress 必须保持一致
 
 ```shell
 #master110 配置：
 cat >/etc/keepalived/keepalived.conf<<"EOF"
 ! Configuration File for keepalived
 global_defs {
-   router_id LVS_DEVEL
+   router_id LVS_110
    script_user root
    enable_script_security
 }
@@ -506,9 +516,12 @@ vrrp_script chk_apiserver {
 }
 vrrp_instance VI_1 {
    state MASTER
+   # 每台主机网卡都不同
    interface ens33
+   # 需要设置具体主机IP
    mcast_src_ip 192.168.127.110
-   virtual_router_id 50
+   # 每台机器路由Id不能相同
+   virtual_router_id 52
    priority 100
    advert_int 2
    authentication {
@@ -516,7 +529,7 @@ vrrp_instance VI_1 {
        auth_pass 123456
    }
    virtual_ipaddress {
-       192.168.127.200
+       192.168.127.200/24
    }
    track_script {
       chk_apiserver
@@ -528,7 +541,7 @@ EOF
 cat >/etc/keepalived/keepalived.conf<<"EOF"
 ! Configuration File for keepalived
 global_defs {
-   router_id LVS_DEVEL
+   router_id LVS_120
    script_user root
    enable_script_security
 }
@@ -543,7 +556,7 @@ vrrp_instance VI_1 {
    state BACKUP
    interface ens33
    mcast_src_ip 192.168.127.120
-   virtual_router_id 51
+   virtual_router_id 52
    priority 99
    advert_int 2
    authentication {
@@ -563,7 +576,7 @@ EOF
 cat >/etc/keepalived/keepalived.conf<<"EOF"
 ! Configuration File for keepalived
 global_defs {
-   router_id LVS_DEVEL
+   router_id LVS_130
    script_user root
    enable_script_security
 }
@@ -631,6 +644,13 @@ chmod u+x /etc/keepalived/check_apiserver.sh
 systemctl daemon-reload
 systemctl enable --now haproxy
 systemctl enable --now keepalived
+
+# 查看IP是否落到某台机器
+[root@k8s 2022-09-05]# ip -brief address show|grep 200
+eth0   UP     192.168.127.110/24 192.168.127.200/24 fe80::215:5dff:fe32:7e01/64 
+
+[root@k8s 2022-09-05]# hostname -I|grep 200
+192.168.127.110 192.168.127.200 172.19.0.1 172.21.0.1
 ```
 
 #### 8.2 搭建 etcd 集群
@@ -890,14 +910,15 @@ CACERT=$CERT_PATH/ca.pem
 CERT=$CERT_PATH/etcd-peer.pem
 KEY=$CERT_PATH/etcd-peer-key.pem
 # 此处只能指定一个节点
-ENDPOINTS=https://192.168.127.110:2379
+ENDPOINTS='https://192.168.127.1'$2'0:2379'
 ETCDCTL_API=3
-BACKUP_FILE=/data/etcd/backup/etcd-snapshot-`date +%Y%m%d%H%M%S`.db
 DATA_DIR=/data/etcd/etcd-server
+BACKUP_DIR=/data/etcd/backup
+BACKUP_FILE=$BACKUP_DIR'/etcd-snapshot-`date +%Y-%m-%d_%H.%M.%S`.db'
 
 if [[ $1 = 'backup' ]];
 then
-  mkdir -p /data/etcd/backup
+  mkdir -p $BACKUP_DIR
   etcdctl --cacert="${CACERT}" \
   --cert="${CERT}" --key="${KEY}" \
   --endpoints=${ENDPOINTS} \
@@ -1025,7 +1046,45 @@ cfssl gencert -ca=ca.pem -ca-key=ca-key.pem \
 etcd-client-csr.json | cfssljson -bare etcd-client
 ```
 
-##### 8.3.3 签发 apiserver 服务端证书
+##### 8.3.3 签发 apiserver 请求 kubelet 使用的 client 证书
+
+该证书是为apiserver与 kubelet 集群通讯使用的证书， apiserver作为 client端， kubelet 作为server端。进入 master130 机器，创建生成证书签名请求的json文件 /opt/cert/kubelet-client-csr.json：
+
+```shell
+cat > /opt/cert/kubelet-client-csr.json << "EOF"
+{
+    "CN": "kubelet-client",
+    "hosts":[
+       "192.168.127.110",
+       "192.168.127.120",
+       "192.168.127.130"
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+           "C":"CN",
+           "ST":"GuangDong",
+           "L": "ShenZhen",
+           "O": "k8s",
+           "OU": "system"
+        }
+    ]
+}
+EOF
+```
+
+执行命令：
+
+```shell
+cfssl gencert -ca=ca.pem -ca-key=ca-key.pem \
+-config=ca-config.json -profile=client \
+kubelet-client-csr.json | cfssljson -bare kubelet-client
+```
+
+##### 8.3.4 签发 apiserver 服务端证书
 
 该证书是为其他客户端与apiserver通讯使用的证书， 其他客户端作为 client 端， apiserver 作为 server 端。进入 master130 机器，创建生成证书签名请求的json文件 /opt/cert/apiserver-server-csr.json：
 
@@ -1087,6 +1146,7 @@ mkdir config
 mkdir cert && cd cert
 scp master130:/opt/cert/ca*.pem .
 scp master130:/opt/cert/etcd-client*.pem .
+scp master130:/opt/cert/kubelet-client*.pem .
 scp master130:/opt/cert/apiserver-server*.pem .
 # 将证书复制到所有主节点
 for i in master130 master120 master110; \
@@ -1163,7 +1223,7 @@ rules:
   - level: Metadata
 ```
 
-##### 8.3.4 创建启动脚本
+##### 8.3.5 创建启动脚本
 
 创建脚本前需要先重建 token ，用于kubelet 向apiserver申请证书，并通过 controller-manager颁发证书后才可以让kubelet与apiserver正常通信
 
@@ -1190,7 +1250,9 @@ $i:/opt/kubernetes/server/bin/config;done
 - kubelet-client 相关证书可与etcd-certfile共用同一套证书，该证书都是以apiserver作为客户端分布请求 kubelet 与 etcd 所使用的证书
 
 ```shell
-# master110
+# master110 
+# 由于后面 Metrics Server需要用到聚合功能，所以此处需要加上
+# proxy-client 证书生成可参考第 12 章节
 cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
 #!/bin/bash
 ./kube-apiserver \
@@ -1201,9 +1263,6 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
  --authorization-mode=RBAC,Node \
  --enable-bootstrap-token-auth \
  --token-auth-file=config/token.csv \
-
- # 由于后面 Metrics Server需要用到聚合功能，所以此处需要加上
- # proxy-client 证书生成可参考第 12 章节
  --enable-aggregator-routing=true \
  --runtime-config=api/all=true \
  --requestheader-allowed-names=aggregator \
@@ -1213,7 +1272,6 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
  --requestheader-client-ca-file=./cert/ca.pem \
  --proxy-client-cert-file=./cert/proxy-client.pem \
  --proxy-client-key-file=./cert/proxy-client-key.pem \
-
  --client-ca-file=./cert/ca.pem \
  --enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota \
  --etcd-cafile=./cert/ca.pem \
@@ -1225,8 +1283,8 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
  --service-account-signing-key-file=./cert/ca-key.pem \
  --service-cluster-ip-range=10.244.0.0/16 \
  --service-node-port-range=3000-49999 \
- --kubelet-client-certificate=./cert/etcd-client.pem \
- --kubelet-client-key=./cert/etcd-client-key.pem \
+ --kubelet-client-certificate=./cert/kubelet-client.pem \
+ --kubelet-client-key=./cert/kubelet-client-key.pem \
  --log-dir=/var/logs/kubernetes/kube-apiserver \
  --tls-cert-file=./cert/apiserver-server.pem \
  --tls-private-key-file=./cert/apiserver-server-key.pem \
@@ -1248,9 +1306,6 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
  --authorization-mode=RBAC,Node \
  --enable-bootstrap-token-auth \
  --token-auth-file=config/token.csv \
-
- # 由于后面 Metrics Server需要用到聚合功能，所以此处需要加上
- # proxy-client 证书生成可参考第 12 章节
  --enable-aggregator-routing=true \
  --runtime-config=api/all=true \
  --requestheader-allowed-names=aggregator \
@@ -1260,7 +1315,6 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
  --requestheader-client-ca-file=./cert/ca.pem \
  --proxy-client-cert-file=./cert/proxy-client.pem \
  --proxy-client-key-file=./cert/proxy-client-key.pem \
-
  --client-ca-file=./cert/ca.pem \
  --enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota \
  --etcd-cafile=./cert/ca.pem \
@@ -1272,8 +1326,8 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
  --service-account-signing-key-file=./cert/ca-key.pem \
  --service-cluster-ip-range=10.244.0.0/16 \
  --service-node-port-range=3000-49999 \
- --kubelet-client-certificate=./cert/etcd-client.pem \
- --kubelet-client-key=./cert/etcd-client-key.pem \
+ --kubelet-client-certificate=./cert/kubelet-client.pem \
+ --kubelet-client-key=./cert/kubelet-client-key.pem \
  --log-dir=/var/logs/kubernetes/kube-apiserver \
  --tls-cert-file=./cert/apiserver-server.pem \
  --tls-private-key-file=./cert/apiserver-server-key.pem \
@@ -1295,9 +1349,6 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
  --authorization-mode=RBAC,Node \
  --enable-bootstrap-token-auth \
  --token-auth-file=config/token.csv \
-
- # 由于后面 Metrics Server需要用到聚合功能，所以此处需要加上
- # proxy-client 证书生成可参考第 12 章节
  --enable-aggregator-routing=true \
  --runtime-config=api/all=true \
  --requestheader-allowed-names=aggregator \
@@ -1307,7 +1358,6 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
  --requestheader-client-ca-file=./cert/ca.pem \
  --proxy-client-cert-file=./cert/proxy-client.pem \
  --proxy-client-key-file=./cert/proxy-client-key.pem \
-
  --client-ca-file=./cert/ca.pem \
  --enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota \
  --etcd-cafile=./cert/ca.pem \
@@ -1319,8 +1369,8 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
  --service-account-signing-key-file=./cert/ca-key.pem \
  --service-cluster-ip-range=10.244.0.0/16 \
  --service-node-port-range=3000-49999 \
- --kubelet-client-certificate=./cert/etcd-client.pem \
- --kubelet-client-key=./cert/etcd-client-key.pem \
+ --kubelet-client-certificate=./cert/kubelet-client.pem \
+ --kubelet-client-key=./cert/kubelet-client-key.pem \
  --log-dir=/var/logs/kubernetes/kube-apiserver \
  --tls-cert-file=./cert/apiserver-server.pem \
  --tls-private-key-file=./cert/apiserver-server-key.pem \
@@ -1391,7 +1441,7 @@ EOF
 supervisorctl update
 ```
 
-##### 8.3.5 使用 kubectl 查看集群状态
+##### 8.3.6 使用 kubectl 查看集群状态
 
 为了使得用户具备管理权限，同样需要先签发证书，<mark>注意证书请求文件中的 names -> O 属性必须是"system:masters"</mark>
 
@@ -1504,7 +1554,7 @@ NAMESPACE   NAME                 TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)
 default     service/kubernetes   ClusterIP   192.168.0.1   <none>        443/TCP   3h7m
 ```
 
-##### 8.3.6 配置kubectl子命令补全功能
+##### 8.3.7 配置kubectl子命令补全功能
 
 ```sh
 yum install -y bash-completion
@@ -1561,7 +1611,8 @@ kube-controller-manager-csr.json | cfssljson -bare kube-controller-manager
 
 # 将证书复制到所有master主节点
 for i in master110 master120 master130;\
-do scp /opt/cert/kube-controller-manager*.pem $i:/opt/kubernetes/server/bin/cert;done
+do scp /opt/cert/kube-controller-manager*.pem \
+$i:/opt/kubernetes/server/bin/cert;done
 ```
 
 > CN 为 system:kube-controller-manager , O 为 system:kube-controller-manager
@@ -1708,7 +1759,8 @@ kube-scheduler-csr.json | cfssljson -bare kube-scheduler
 
 # 将证书复制到所有主节点
 for i in master110 master120 master130;\
-do scp /opt/cert/kube-scheduler*.pem $i:/opt/kubernetes/server/bin/cert;done
+do scp /opt/cert/kube-scheduler*.pem \
+$i:/opt/kubernetes/server/bin/cert;done
 ```
 
 ##### 8.5.2 创建配置文件
@@ -1938,10 +1990,12 @@ kubelet-csr.json | cfssljson -bare kubelet
 
 ```shell
 for i in master110 master120 master130;\
-do scp /opt/cert/kubelet*.pem $i:/opt/kubernetes/server/bin/cert;done
+do scp /opt/cert/kubelet*.pem \
+$i:/opt/kubernetes/server/bin/cert;done
 
 for i in master110 master120 master130;\
-do scp /opt/cert/ca*.pem $i:/opt/kubernetes/server/bin/cert;done
+do scp /opt/cert/ca*.pem \
+$i:/opt/kubernetes/server/bin/cert;done
 ```
 
 ##### 9.2.2 生成kubelet配置文件及脚本
@@ -2117,6 +2171,42 @@ kubectl certificate approve node-csr-BbHAG2ba...
 # 批量审批
 kubectl get csr | grep Pending | awk '{print $1}' | xargs kubectl certificate approve
 ```
+
+##### 9.2.4 遇到问题
+
+1.failed to run Kubelet: failed to create kubelet: get remote runtime typed version failed: rpc error: code = Unimplemented desc = unknown service runtime.v1alpha2.RuntimeService
+
+该问题涉及运行时runtime，即containerd，可以先查看containerd日志是否有异常，若无异常则可重试containerd后再重启kubelet。若仍未解决则参考[解决方式]([k8s部署问题集锦（一） kubelet 启动报错failed to run Kubelet unable to determine runtime-pudn.com](https://www.pudn.com/news/62a36e3b3934cd25af765c26.html))
+
+2.kubelet 出现下面错误: Failed to contact API server when waiting for CSINode publishing: csinodes.storage.k8s.io "k8s.node1" is forbidden: User "system:node:node01" cannot get resource "csinodes" in API group "storage.k8s.io" at the cluster scope: can only access CSINode with the same name as the requesting node
+
+节点中出现了名称：node01，该主机名与当前存在的主机名不符，导致无法连接到ApiServer. 可以通过cfssl命令查看证书来求证。
+
+```shell
+# 首先将 cert/kubelet-client-current.pem 复制一份
+# 然后将其中的-----BEGIN EC PRIVATE KEY-----部分移除
+# 最后执行命令即可看到 system:node:node01
+cfssl certinfo -cert cert/kubelet-client-current.bak.pem
+```
+
+遇到次状况是因为主机hostname没有调整为预先设置的主机名，可通过一下命令设置:
+
+```shell
+hostnamectl --static set-hostname  master110
+```
+
+设置完成后注意，先暂停kubelet，然后将 /opt/kubernetes/server/bin 下面kubelet的相关配置删除，最后再重启kubelet即可：
+
+```shell
+rm -fr config/kubelet.kubeconfig
+rm -fr cert/kubelet-client-current.*
+
+supervisorctl start kubelet
+```
+
+
+
+
 
 #### 9.3 部署 kube-proxy
 
@@ -2328,7 +2418,9 @@ ctr -n k8s.io image import /opt/k8s.1.24.3.tar
 
 #### 10.2 遇到的问题
 
-<mark>最终发现时间原因是因为 config.toml 配置文件使用了旧版. 直接使用containerd生成默认配置文件后简单修改即可， 参考 9.1.1。故该解决方案可忽略</mark>
+1. 
+   
+   <mark>最终发现时间原因是因为 config.toml 配置文件使用了旧版. 直接使用containerd生成默认配置文件后简单修改即可， 参考 9.1.1。故该解决方案可忽略</mark>
 
 ```shell
 [root@master120 opt]# kubectl get pods -A
@@ -2359,6 +2451,17 @@ W0820 02:37:06.455820       1 client_config.go:617] Neither --kubeconfig nor --m
           hostPath:
             path: /opt/kubernetes/server/bin/cert/
 ```
+
+2. calico-kube-controller 状态一直是 pending
+   
+   该情况很可能是因为存在污点 taints， 可通过 kubectl describe 查看。移除相关污点参考：
+   
+   ```shell
+   kubectl taint node k8s.node3 node.kubernetes.io/not-ready:NoSchedule-
+   kubectl taint node k8s.node3 node.kubernetes.io/disk-pressure:NoSchedule-
+   ```
+   
+   
 
 ### 11. 安装CoreDNS
 
@@ -2818,13 +2921,19 @@ netstat -ltunp|grep 10255|awk '{print $7}'|awk -F "/" '{system("echo "$1";kill -
    
     vim /etc/sysconfig/iptables
    
+   > 注意下面的规则一定放在下方规则的前方，否则规则会被all类型的规则过滤掉 
+   > 
+   > REJECT     all  --  0.0.0.0/0            0.0.0.0/0            reject-with icmp-host-prohibited
+   
    ```shell
-   -A INPUT -p tcp -m tcp --dport 111 -j ACCEPT
-   -A INPUT -p udp -m udp --dport 111 -j ACCEPT
-   -A INPUT -p tcp -m tcp --dport 2049 -j ACCEPT
-   -A INPUT -p udp -m udp --dport 2049 -j ACCEPT
-   -A INPUT -p tcp -m tcp --dport 4001:4004 -j ACCEPT
-   -A INPUT -p udp -m udp --dport 4001:4004 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 16443 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 2380 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 2379 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 6443 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 10250 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 10255 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 10257 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 10259 -j ACCEPT
    ```
    
    <mark>临时修改</mark>
