@@ -1260,6 +1260,9 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
  --advertise-address=192.168.127.110 \
  --audit-log-path=/var/logs/kubernetes/kube-apiserver/audit.log \
  --audit-policy-file=./config/audit.yml \
+ --audit-log-maxage=7 \
+ --audit-log-maxbackup=2 \
+ --audit-log-maxsize=100 \
  --authorization-mode=RBAC,Node \
  --enable-bootstrap-token-auth \
  --token-auth-file=config/token.csv \
@@ -1303,6 +1306,9 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
  --advertise-address=192.168.127.120 \
  --audit-log-path=/var/logs/kubernetes/kube-apiserver/audit.log \
  --audit-policy-file=./config/audit.yml \
+ --audit-log-maxage=7 \
+ --audit-log-maxbackup=2 \
+ --audit-log-maxsize=100 \
  --authorization-mode=RBAC,Node \
  --enable-bootstrap-token-auth \
  --token-auth-file=config/token.csv \
@@ -1346,6 +1352,9 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
  --advertise-address=192.168.127.130 \
  --audit-log-path=/var/logs/kubernetes/kube-apiserver/audit.log \
  --audit-policy-file=./config/audit.yml \
+ --audit-log-maxage=7 \
+ --audit-log-maxbackup=2 \
+ --audit-log-maxsize=100 \
  --authorization-mode=RBAC,Node \
  --enable-bootstrap-token-auth \
  --token-auth-file=config/token.csv \
@@ -1895,6 +1904,18 @@ sed -i 's@k8s.gcr.io/pause:3.6@registry.aliyuncs.com/google_containers/pause:3.6
               endpoint = ["http://f1361db2.m.daocloud.io"]
          [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
               endpoint = ["http://hub-mirror.c.163.com"]
+
+# 改成私有仓库，注意需关闭 tls
+[plugins."io.containerd.grpc.v1.cri".registry.configs]
+     [plugins."io.containerd.grpc.v1.cri".registry.configs."k8s.nexus".tls]
+        insecure_skip_verify = true
+     [plugins."io.containerd.grpc.v1.cri".registry.configs."k8s.nexus".auth]
+        username = "admin"
+        password = "password"
+
+[plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+     [plugins."io.containerd.grpc.v1.cri".registry.mirrors."k8s.nexus"]
+        endpoint = ["http://192.168.57.31:8090"]
 ```
 
 ##### 9.1.2 安装runc依赖
@@ -2035,6 +2056,9 @@ kubectl create clusterrolebinding cluster-system-anonymous \
 kubectl create clusterrolebinding kubelet-bootstrap \
 --clusterrole=system:node-bootstrapper --user=kubelet-bootstrap \
 --kubeconfig=config/kubelet-bootstrap.config
+
+kubectl create clusterrolebinding kubelet-client \
+--clusterrole=cluster-admin --user=kubelet-client
 ```
 
 ```powershell
@@ -2204,13 +2228,9 @@ rm -fr cert/kubelet-client-current.*
 supervisorctl start kubelet
 ```
 
-
-
-
-
 #### 9.3 部署 kube-proxy
 
-##### 9.3.1 申请证书
+##### 9.3.1 申请证书j
 
 ```shell
 cd /opt/cert
@@ -2358,6 +2378,11 @@ curl https://raw.githubusercontent.com/projectcalico/calico/v3.24.0/manifests/ca
 ```yaml
 3683    - name: CALICO_IPV4POOL_CIDR
 3684      value: "172.7.0.0/16"
+
+
+# 同时在 name: CLUSTER_TYPE 下方新增下方的配置，让calico绑定到指定网卡
+- name: IP_AUTODETECTION_METHOD
+  value: "interface=eth0"
 ```
 
 启动：
@@ -2416,11 +2441,45 @@ do scp k8s.1.24.3.tar $i:/opt;done
 ctr -n k8s.io image import /opt/k8s.1.24.3.tar
 ```
 
-#### 10.2 遇到的问题
+#### 10.2 下载calicoctl
 
-1. 
-   
-   <mark>最终发现时间原因是因为 config.toml 配置文件使用了旧版. 直接使用containerd生成默认配置文件后简单修改即可， 参考 9.1.1。故该解决方案可忽略</mark>
+注意calicoctl 需要与calico.yml中的版本一致
+
+```shell
+curl -O -L  https://github.com/projectcalico/calico/releases/download/v3.24.0/calicoctl-linux-amd64
+mv calicoctl-linux-amd64 /usr/local/bin/calicoctl
+chmod +x /usr/local/bin/calicoctl
+
+
+mkdir /etc/calico
+
+cat > /etc/calico/calicoctl.cfg << EOF
+apiVersion: projectcalico.org/v3
+kind: CalicoAPIConfig
+metadata:
+spec:
+  datastoreType: "kubernetes"
+  kubeconfig: "/root/.kube/config"
+EOF
+
+
+[root@k8s opt]# calicoctl node status
+Calico process is running.
+
+IPv4 BGP status
++--------------+-------------------+-------+----------+---------+
+| PEER ADDRESS |     PEER TYPE     | STATE |  SINCE   |  INFO   |
++--------------+-------------------+-------+----------+---------+
+| 192.168.127.110| node-to-node mesh | start | 12:11:20 | Passive |
++--------------+-------------------+-------+----------+---------+
+
+IPv6 BGP status
+No IPv6 peers found.
+```
+
+#### 10.3 遇到的问题
+
+1. <mark>最终发现时间原因是因为 config.toml 配置文件使用了旧版. 直接使用containerd生成默认配置文件后简单修改即可， 参考 9.1.1。故该解决方案可忽略</mark>
 
 ```shell
 [root@master120 opt]# kubectl get pods -A
@@ -2460,8 +2519,6 @@ W0820 02:37:06.455820       1 client_config.go:617] Neither --kubeconfig nor --m
    kubectl taint node k8s.node3 node.kubernetes.io/not-ready:NoSchedule-
    kubectl taint node k8s.node3 node.kubernetes.io/disk-pressure:NoSchedule-
    ```
-   
-   
 
 ### 11. 安装CoreDNS
 
@@ -2710,12 +2767,12 @@ $ helm install $NAMESPACE/mychart
 yum -y install nfs-server nfs-utils
 
 # 创建共享目录
-mkdir /data/nfs/k8s -p
+mkdir /data/nfs -p
 
 # 配置
 #前面是共享目录，* 代表所有ip或主机，fsid、anonuid、anongid是给从节点写入权限，0代表root用户
 cat >/etc/exports <<EOF 
-/data/nfs/k8s 192.168.127.0/24(rw,sync,fsid=0,anonuid=0,anongid=0)
+/data/nfs 192.168.127.0/24(rw,sync,fsid=0,anonuid=0,anongid=0)
 EOF
 
 #配置生效
@@ -2725,14 +2782,14 @@ exportfs -r
 [root@master110 ~]# exportfs
 /data/nfs/k8s     192.168.127.0/24
 
-#启动rpcbind、nfs服务
+#启动rpcbind、nfs服务，nfs 默认端口是2049
 systemctl start nfs-server rpcbind
 systemctl enable nfs-server rpcbind
 
 # 查看 nfs 是否就绪
 [root@master110 ~]# showmount -e
 Export list for master110:
-/data/nfs/k8s 192.168.127.0/24
+/data/nfs 192.168.127.0/24
 ```
 
 ##### 13.1.2 安装 nfs 客户端
@@ -2740,7 +2797,7 @@ Export list for master110:
 在master120 , master130 上安装 nfs 客户端
 
 ```powershell
-systemctl start nfs-server rpcbind
+yum -y install nfs-utils
 # 启动rpc
 systemctl restart rpcbind && systemctl enable rpcbind
 
@@ -2750,9 +2807,9 @@ Export list for 192.168.127.110:
 /data/nfs/k8s 192.168.127.0/24
 
 # 创建目录
-mkdir /data/nfs/k8s -pr
+mkdir /data/nfs -p
 # 挂载
-mount -t nfs 192.168.127.110:/data/nfs/k8s /data/nfs/k8s
+mount -t nfs 192.168.127.110:/data/nfs/ /data/nfs
 # 如果想要开机自动将共享目录挂载到本地,往/etc/fstab 中追加：
 echo "192.168.127.110:/data/nfs/k8s /data/nfs/k8s nfs defaults 0 0" >> /etc/fstab
 ```
@@ -2771,9 +2828,9 @@ cd nfs-subdir-external-provisioner
 vim values.yaml
 
 kubectl create ns nfs
-helm install nfs-subdir-external-provisioner . -n nfs \
+helm install kuboard . -n nfs \
 --set nfs.server=192.168.127.110 \
---set nfs.path=/data/nfs/k8s
+--set nfs.path=/data/nfs/kuboard
 
 # 执行结果 
 [root@master130 nfs-subdir-external-provisioner]# helm install  nfs-subdir-external-provisioner . -n nfs
@@ -2787,7 +2844,7 @@ TEST SUITE: None
 # 镜像拉取失败
 [root@master130 nfs-subdir-external-provisioner]# helm install  nfs-subdir-external-provisioner . -n nfs \
 --set nfs.server=192.168.127.110 \
---set nfs.path=/data/nfs/k8s
+--set nfs.path=/data/nfs/kuboard
 NAMESPACE     NAME                                               READY   STATUS             RESTARTS   AGE
 kube-system   calico-kube-controllers-5b97f5d8cf-gpng8           1/1     Running            0          7h42m
 kube-system   calico-node-j5hqp                                  1/1     Running            0          7h42m
@@ -2828,7 +2885,83 @@ NAME                    PROVISIONER                                     RECLAIMP
 nfs-storage (default)   cluster.local/nfs-subdir-external-provisioner   Delete          Immediate           true                   38s
 ```
 
-#### 13.2 安装
+##### 13.1.4 遇到的问题
+
+1. 在nfs客户端执行命令 showmount -e 192.168.127.110 提示以下错误
+   
+   ```shell
+   clnt_create: RPC: Port mapper failure - Unable to receive: errno 113 (No route to host)
+   
+   # 或者
+   rpc mount export: RPC: Unable to receive; errno = No route to host
+   ```
+   
+   这是因为nfs客户端无法连接到nfs服务器相关端口，通常是因为nfs服务端防火墙没有开放相关端口。进入nfs服务端打开nfs配置文件
+   
+   ```shell
+   vim /etc/sysconfig/nfs
+   
+   # 将下面配置注释打开 
+   LOCKD_TCPPORT=32803
+   LOCKD_UDPPORT=32769
+   MOUNTD_PORT=892
+   STATD_OUTGOING_PORT=2020
+   
+   # 将配置爱保存后重启服务, 由于此处直接restart无效，故先停止后启动
+   systemctl stop nfs
+   systemctl start nfs
+   
+   # 重启后再服务端查看端口监听情况
+   netstat -ltnp|grep 32803
+   netstat -ltnp|grep 32769
+   netstat -ltnp|grep 892
+   
+   # 最后修改 iptables 配置文件 /etc/sysconfig/iptables,增加以下规则
+   -A INPUT -p udp -m state --state NEW -m udp --dport 111 -j ACCEPT
+   -A INPUT -p tcp -m state --state NEW -m tcp --dport 111 -j ACCEPT
+   -A INPUT -p tcp -m state --state NEW -m tcp --dport 2049 -j ACCEPT
+   -A INPUT -p tcp -m state --state NEW -m tcp --dport 32803 -j ACCEPT
+   -A INPUT -p udp -m state --state NEW -m udp --dport 32769 -j ACCEPT
+   -A INPUT -p tcp -m state --state NEW -m tcp --dport 892 -j ACCEPT
+   -A INPUT -p udp -m state --state NEW -m udp --dport 892 -j ACCEPT
+   -A INPUT -p tcp -m state --state NEW -m tcp --dport 875 -j ACCEPT
+   -A INPUT -p udp -m state --state NEW -m udp --dport 875 -j ACCEPT
+   -A INPUT -p tcp -m state --state NEW -m tcp --dport 662 -j ACCEPT
+   -A INPUT -p udp -m state --state NEW -m udp --dport 662 -j ACCEPT
+   
+   # nfs 客户端查看服务端端口列表
+   [root@k8s opt]# rpcinfo  -p 192.168.127.110
+      program vers proto   port  service
+       100000    4   tcp    111  portmapper
+       100000    3   tcp    111  portmapper
+       100000    2   tcp    111  portmapper
+       100000    4   udp    111  portmapper
+       100000    3   udp    111  portmapper
+       100000    2   udp    111  portmapper
+       100024    1   udp  39295  status
+       100024    1   tcp  47235  status
+       100005    1   udp    892  mountd
+       100005    1   tcp    892  mountd
+       100005    2   udp    892  mountd
+       100005    2   tcp    892  mountd
+       100005    3   udp    892  mountd
+       100005    3   tcp    892  mountd
+       100003    3   tcp   2049  nfs
+       100003    4   tcp   2049  nfs
+       100227    3   tcp   2049  nfs_acl
+       100003    3   udp   2049  nfs
+       100227    3   udp   2049  nfs_acl
+       100021    1   udp  32769  nlockmgr
+       100021    3   udp  32769  nlockmgr
+       100021    4   udp  32769  nlockmgr
+       100021    1   tcp  32803  nlockmgr
+       100021    3   tcp  32803  nlockmgr
+       100021    4   tcp  32803  nlockmgr
+   ```
+   
+   此时回到nfs客户端继续执行 showmount 即可。若客户端仍然执行失败，则可以在客户端查看服务端启动的哪些端口，然后再把查询到的端口一一加到服务端的防火墙中。<mark>不过最后不要这么做，因为此时nfs端口是随机的</mark>
+
+#### 13.2 安装 Kuboard
 
 使用 hostPath 提供持久化方式安装。但是结果却出现未知错误
 
@@ -2940,7 +3073,8 @@ netstat -ltunp|grep 10255|awk '{print $7}'|awk -F "/" '{system("echo "$1";kill -
    
    ```
    iptables-save
-   iptables -I INPUT -p tcp -m tcp --dport 2380 -j ACCEPT
+   iptables -I INPUT -p tcp --dport 2380 -j ACCEPT
+   iptables -I INPUT -p tcp --dport 2049 -j ACCEPT
    iptables-save
    ```
    
