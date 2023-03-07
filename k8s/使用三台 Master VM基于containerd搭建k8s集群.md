@@ -95,6 +95,8 @@ yum --enablerepo=elrepo-kernel install kernel-lt
 
 内核安装完成后需要设置默认启动项/etc/default/grub 为其增加参数 GRUB_DEFAULT=0 ，即GRUB 初始化页面的第一个内核将作为默认内核。：
 
+vim /etc/default/grub
+
 ```
 GRUB_TIMEOUT=5
 GRUB_DEFAULT=0
@@ -188,6 +190,7 @@ lsmod | grep -e ip_vs -e nf_conntrack
 ```shell
 cat <<EOF > /etc/sysctl.d/k8s.conf
 net.ipv4.ip_forward = 1
+net.ipv4.ip_nonlocal_bind=1
 net.bridge.bridge-nf-call-iptables = 1
 net.bridge.bridge-nf-call-ip6tables = 1
 fs.may_detach_mounts = 1
@@ -258,12 +261,18 @@ gpasswd -a k8s docker
 ```shell
 yum install -y epel-release
 yum install -y supervisor
+
 systemctl enable supervisord 
 systemctl start supervisord
+```
 
-# 最好将 supervisor 配置文件中的进程异常自动重试设置为false
-# 否则使用 supervisorctl 停止进程后会自动重启（重试三次），及其蛋疼
-# 更重要的是重启完成后没有更新进程状态，通过status还是历史状态
+ <mark>该部署可以在具体的service配置中设置，无效在全局设置</mark>。最好将 supervisor 配置文件中的进程异常自动重试设置为false
+
+否则使用 supervisorctl 停止进程后会自动重启（重试三次），及其蛋疼
+
+更重要的是重启完成后没有更新进程状态，通过status还是历史状态
+
+```shell
 vim /etc/supervisord.conf
 
 autorestart=false              ; retstart at unexpected quit (default: true)
@@ -290,7 +299,9 @@ hostnamectl --static set-hostname  master110
 cd /root
 ssh-keygen -t rsa
 
-for i in master110 master120 master130 ;do ssh-copy-id -i /root/.ssh/id_rsa.pub $i;done
+# 分别在三台机器执行，服务器自身也需要复制！！
+for i in master110 master120 master130;\
+do ssh-copy-id -i /root/.ssh/id_rsa.pub $i;done
 
 #测试
 ssh -p 4956 master120
@@ -483,14 +494,16 @@ EOF
 
 ##### 8.1.2 配置 keepalived
 
-注意三台主机需要设置不同的优先级 priority ，这样 keepalived 才会自动选择其中一台提供服务
+注意三台主机需要设置不同的优先级 priority ，这样 keepalived 才会自动选择其中一台提供服务。
+
+> 注意： router_id 在局域网内需保证唯一，virtual_router_id 主机及备机需要保持一致，主机的 priority 需要高于备机。所有主机的virtual_ipaddress 必须保持一致
 
 ```shell
 #master110 配置：
 cat >/etc/keepalived/keepalived.conf<<"EOF"
 ! Configuration File for keepalived
 global_defs {
-   router_id LVS_DEVEL
+   router_id LVS_110
    script_user root
    enable_script_security
 }
@@ -503,9 +516,12 @@ vrrp_script chk_apiserver {
 }
 vrrp_instance VI_1 {
    state MASTER
+   # 每台主机网卡都不同
    interface ens33
+   # 需要设置具体主机IP
    mcast_src_ip 192.168.127.110
-   virtual_router_id 50
+   # 每台机器路由Id不能相同
+   virtual_router_id 52
    priority 100
    advert_int 2
    authentication {
@@ -513,7 +529,7 @@ vrrp_instance VI_1 {
        auth_pass 123456
    }
    virtual_ipaddress {
-       192.168.127.200
+       192.168.127.200/24
    }
    track_script {
       chk_apiserver
@@ -525,7 +541,7 @@ EOF
 cat >/etc/keepalived/keepalived.conf<<"EOF"
 ! Configuration File for keepalived
 global_defs {
-   router_id LVS_DEVEL
+   router_id LVS_120
    script_user root
    enable_script_security
 }
@@ -540,7 +556,7 @@ vrrp_instance VI_1 {
    state BACKUP
    interface ens33
    mcast_src_ip 192.168.127.120
-   virtual_router_id 51
+   virtual_router_id 52
    priority 99
    advert_int 2
    authentication {
@@ -560,7 +576,7 @@ EOF
 cat >/etc/keepalived/keepalived.conf<<"EOF"
 ! Configuration File for keepalived
 global_defs {
-   router_id LVS_DEVEL
+   router_id LVS_130
    script_user root
    enable_script_security
 }
@@ -628,6 +644,13 @@ chmod u+x /etc/keepalived/check_apiserver.sh
 systemctl daemon-reload
 systemctl enable --now haproxy
 systemctl enable --now keepalived
+
+# 查看IP是否落到某台机器
+[root@k8s 2022-09-05]# ip -brief address show|grep 200
+eth0   UP     192.168.127.110/24 192.168.127.200/24 fe80::215:5dff:fe32:7e01/64 
+
+[root@k8s 2022-09-05]# hostname -I|grep 200
+192.168.127.110 192.168.127.200 172.19.0.1 172.21.0.1
 ```
 
 #### 8.2 搭建 etcd 集群
@@ -677,19 +700,22 @@ useradd -s /sbin/nologin -M etcd
 
 ```shell
 cd /opt
-get https://github.com/etcd-io/etcd/releases/download/v3.5.0/etcd-v3.5.0-linux-amd64.tar.gz
+wget https://github.com/etcd-io/etcd/releases/download/v3.5.0/etcd-v3.5.0-linux-amd64.tar.gz
 tar -xvf etcd-v3.5.0-linux-amd64.tar.gz
 mv etcd-v3.5.0-linux-amd64 etcd-v3.5.0
 
 # 创建相关目录
-mkdir -p /opt/etcd/cert /data/etcd /data/etcd/etcd-server /var/logs/etcd
+mkdir -p /opt/etcd/cert /data/etcd \
+/data/etcd/etcd-server /var/logs/etcd
 
 # 复制二进制文件
 cp /opt/etcd-v3.5.0/etcd* /opt/etcd
 
 # 进入master130证书目录将 master130 生成的证书复制到 etcd 相关目录
-for i in master110 master120 master130 ;do scp /opt/cert/ca*.pem $i:/opt/etcd/cert;done
-for i in master110 master120 master130 ;do scp /opt/cert/etcd-peer*.pem $i:/opt/etcd/cert;done
+for i in master110 master120 master130 ;\
+do scp /opt/cert/ca*.pem $i:/opt/etcd/cert;done
+for i in master110 master120 master130 ;\
+do scp /opt/cert/etcd-peer*.pem $i:/opt/etcd/cert;done
 ```
 
 首先设置etcd启动脚本：/opt/etcd/etcd-server-startup.sh
@@ -698,7 +724,7 @@ for i in master110 master120 master130 ;do scp /opt/cert/etcd-peer*.pem $i:/opt/
 > 
 > --name 参数需要与--initial-cluster中的节点名称一致
 > 
-> --enable-v2 不能少，因为flannel插件使用的是 V2 接口，而etcd从 v3.4 开始默认关闭了 v2 接口
+> --enable-v2 可以移除，flannel插件使用的是 V2 接口，而etcd从 v3.4 开始默认关闭了 v2 接口，若使用calico插件则可忽略
 
 ```bash
 # master110 
@@ -786,6 +812,7 @@ useradd -s /sbin/nologin -M etcd
 chown -R etcd.etcd /opt/etcd-v3.5.0/
 chown -R etcd.etcd /data/etcd/
 chown -R etcd.etcd /var/logs/etcd/
+chown -R etcd.etcd /opt/etcd/cert
 ```
 
 创建启动service：
@@ -883,14 +910,15 @@ CACERT=$CERT_PATH/ca.pem
 CERT=$CERT_PATH/etcd-peer.pem
 KEY=$CERT_PATH/etcd-peer-key.pem
 # 此处只能指定一个节点
-ENDPOINTS=https://192.168.127.110:2379
+ENDPOINTS='https://192.168.127.1'$2'0:2379'
 ETCDCTL_API=3
-BACKUP_FILE=/data/etcd/backup/etcd-snapshot-`date +%Y%m%d%H%M%S`.db
 DATA_DIR=/data/etcd/etcd-server
+BACKUP_DIR=/data/etcd/backup
+BACKUP_FILE=$BACKUP_DIR'/etcd-snapshot-`date +%Y-%m-%d_%H.%M.%S`.db'
 
 if [[ $1 = 'backup' ]];
 then
-  mkdir -p /data/etcd/backup
+  mkdir -p $BACKUP_DIR
   etcdctl --cacert="${CACERT}" \
   --cert="${CERT}" --key="${KEY}" \
   --endpoints=${ENDPOINTS} \
@@ -1018,7 +1046,45 @@ cfssl gencert -ca=ca.pem -ca-key=ca-key.pem \
 etcd-client-csr.json | cfssljson -bare etcd-client
 ```
 
-##### 8.3.3 签发 apiserver 服务端证书
+##### 8.3.3 签发 apiserver 请求 kubelet 使用的 client 证书
+
+该证书是为apiserver与 kubelet 集群通讯使用的证书， apiserver作为 client端， kubelet 作为server端。进入 master130 机器，创建生成证书签名请求的json文件 /opt/cert/kubelet-client-csr.json：
+
+```shell
+cat > /opt/cert/kubelet-client-csr.json << "EOF"
+{
+    "CN": "kubelet-client",
+    "hosts":[
+       "192.168.127.110",
+       "192.168.127.120",
+       "192.168.127.130"
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+           "C":"CN",
+           "ST":"GuangDong",
+           "L": "ShenZhen",
+           "O": "k8s",
+           "OU": "system"
+        }
+    ]
+}
+EOF
+```
+
+执行命令：
+
+```shell
+cfssl gencert -ca=ca.pem -ca-key=ca-key.pem \
+-config=ca-config.json -profile=client \
+kubelet-client-csr.json | cfssljson -bare kubelet-client
+```
+
+##### 8.3.4 签发 apiserver 服务端证书
 
 该证书是为其他客户端与apiserver通讯使用的证书， 其他客户端作为 client 端， apiserver 作为 server 端。进入 master130 机器，创建生成证书签名请求的json文件 /opt/cert/apiserver-server-csr.json：
 
@@ -1080,6 +1146,7 @@ mkdir config
 mkdir cert && cd cert
 scp master130:/opt/cert/ca*.pem .
 scp master130:/opt/cert/etcd-client*.pem .
+scp master130:/opt/cert/kubelet-client*.pem .
 scp master130:/opt/cert/apiserver-server*.pem .
 # 将证书复制到所有主节点
 for i in master130 master120 master110; \
@@ -1156,7 +1223,7 @@ rules:
   - level: Metadata
 ```
 
-##### 8.3.4 创建启动脚本
+##### 8.3.5 创建启动脚本
 
 创建脚本前需要先重建 token ，用于kubelet 向apiserver申请证书，并通过 controller-manager颁发证书后才可以让kubelet与apiserver正常通信
 
@@ -1183,22 +1250,31 @@ $i:/opt/kubernetes/server/bin/config;done
 - kubelet-client 相关证书可与etcd-certfile共用同一套证书，该证书都是以apiserver作为客户端分布请求 kubelet 与 etcd 所使用的证书
 
 ```shell
-# master110
+# master110 
+# 由于后面 Metrics Server需要用到聚合功能，所以此处需要加上
+# proxy-client 证书生成可参考第 12 章节
 cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
 #!/bin/bash
 ./kube-apiserver \
  --apiserver-count=3 \
  --advertise-address=192.168.127.110 \
- --enable-aggregator-routing=true \
  --audit-log-path=/var/logs/kubernetes/kube-apiserver/audit.log \
  --audit-policy-file=./config/audit.yml \
+ --audit-log-maxage=7 \
+ --audit-log-maxbackup=2 \
+ --audit-log-maxsize=100 \
  --authorization-mode=RBAC,Node \
- --runtime-config=api/all=true \
  --enable-bootstrap-token-auth \
  --token-auth-file=config/token.csv \
+ --enable-aggregator-routing=true \
+ --runtime-config=api/all=true \
+ --requestheader-allowed-names=aggregator \
  --requestheader-group-headers=X-Remote-Group \
  --requestheader-username-headers=X-Remote-User \
  --requestheader-extra-headers-prefix=X-Remote-Extra- \
+ --requestheader-client-ca-file=./cert/ca.pem \
+ --proxy-client-cert-file=./cert/proxy-client.pem \
+ --proxy-client-key-file=./cert/proxy-client-key.pem \
  --client-ca-file=./cert/ca.pem \
  --enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota \
  --etcd-cafile=./cert/ca.pem \
@@ -1210,8 +1286,8 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
  --service-account-signing-key-file=./cert/ca-key.pem \
  --service-cluster-ip-range=10.244.0.0/16 \
  --service-node-port-range=3000-49999 \
- --kubelet-client-certificate=./cert/etcd-client.pem \
- --kubelet-client-key=./cert/etcd-client-key.pem \
+ --kubelet-client-certificate=./cert/kubelet-client.pem \
+ --kubelet-client-key=./cert/kubelet-client-key.pem \
  --log-dir=/var/logs/kubernetes/kube-apiserver \
  --tls-cert-file=./cert/apiserver-server.pem \
  --tls-private-key-file=./cert/apiserver-server-key.pem \
@@ -1228,16 +1304,23 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
 ./kube-apiserver \
  --apiserver-count=3 \
  --advertise-address=192.168.127.120 \
- --enable-aggregator-routing=true \
  --audit-log-path=/var/logs/kubernetes/kube-apiserver/audit.log \
  --audit-policy-file=./config/audit.yml \
+ --audit-log-maxage=7 \
+ --audit-log-maxbackup=2 \
+ --audit-log-maxsize=100 \
  --authorization-mode=RBAC,Node \
- --runtime-config=api/all=true \
  --enable-bootstrap-token-auth \
  --token-auth-file=config/token.csv \
+ --enable-aggregator-routing=true \
+ --runtime-config=api/all=true \
+ --requestheader-allowed-names=aggregator \
  --requestheader-group-headers=X-Remote-Group \
  --requestheader-username-headers=X-Remote-User \
  --requestheader-extra-headers-prefix=X-Remote-Extra- \
+ --requestheader-client-ca-file=./cert/ca.pem \
+ --proxy-client-cert-file=./cert/proxy-client.pem \
+ --proxy-client-key-file=./cert/proxy-client-key.pem \
  --client-ca-file=./cert/ca.pem \
  --enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota \
  --etcd-cafile=./cert/ca.pem \
@@ -1249,8 +1332,8 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
  --service-account-signing-key-file=./cert/ca-key.pem \
  --service-cluster-ip-range=10.244.0.0/16 \
  --service-node-port-range=3000-49999 \
- --kubelet-client-certificate=./cert/etcd-client.pem \
- --kubelet-client-key=./cert/etcd-client-key.pem \
+ --kubelet-client-certificate=./cert/kubelet-client.pem \
+ --kubelet-client-key=./cert/kubelet-client-key.pem \
  --log-dir=/var/logs/kubernetes/kube-apiserver \
  --tls-cert-file=./cert/apiserver-server.pem \
  --tls-private-key-file=./cert/apiserver-server-key.pem \
@@ -1267,16 +1350,23 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
 ./kube-apiserver \
  --apiserver-count=3 \
  --advertise-address=192.168.127.130 \
- --enable-aggregator-routing=true \
  --audit-log-path=/var/logs/kubernetes/kube-apiserver/audit.log \
  --audit-policy-file=./config/audit.yml \
+ --audit-log-maxage=7 \
+ --audit-log-maxbackup=2 \
+ --audit-log-maxsize=100 \
  --authorization-mode=RBAC,Node \
- --runtime-config=api/all=true \
  --enable-bootstrap-token-auth \
  --token-auth-file=config/token.csv \
+ --enable-aggregator-routing=true \
+ --runtime-config=api/all=true \
+ --requestheader-allowed-names=aggregator \
  --requestheader-group-headers=X-Remote-Group \
  --requestheader-username-headers=X-Remote-User \
  --requestheader-extra-headers-prefix=X-Remote-Extra- \
+ --requestheader-client-ca-file=./cert/ca.pem \
+ --proxy-client-cert-file=./cert/proxy-client.pem \
+ --proxy-client-key-file=./cert/proxy-client-key.pem \
  --client-ca-file=./cert/ca.pem \
  --enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota \
  --etcd-cafile=./cert/ca.pem \
@@ -1288,8 +1378,8 @@ cat > /opt/kubernetes/server/bin/kube-apiserver.sh << "EOF"
  --service-account-signing-key-file=./cert/ca-key.pem \
  --service-cluster-ip-range=10.244.0.0/16 \
  --service-node-port-range=3000-49999 \
- --kubelet-client-certificate=./cert/etcd-client.pem \
- --kubelet-client-key=./cert/etcd-client-key.pem \
+ --kubelet-client-certificate=./cert/kubelet-client.pem \
+ --kubelet-client-key=./cert/kubelet-client-key.pem \
  --log-dir=/var/logs/kubernetes/kube-apiserver \
  --tls-cert-file=./cert/apiserver-server.pem \
  --tls-private-key-file=./cert/apiserver-server-key.pem \
@@ -1360,7 +1450,7 @@ EOF
 supervisorctl update
 ```
 
-##### 8.3.5 使用 kubectl 查看集群状态
+##### 8.3.6 使用 kubectl 查看集群状态
 
 为了使得用户具备管理权限，同样需要先签发证书，<mark>注意证书请求文件中的 names -> O 属性必须是"system:masters"</mark>
 
@@ -1473,7 +1563,7 @@ NAMESPACE   NAME                 TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)
 default     service/kubernetes   ClusterIP   192.168.0.1   <none>        443/TCP   3h7m
 ```
 
-##### 8.3.6 配置kubectl子命令补全功能
+##### 8.3.7 配置kubectl子命令补全功能
 
 ```sh
 yum install -y bash-completion
@@ -1530,7 +1620,8 @@ kube-controller-manager-csr.json | cfssljson -bare kube-controller-manager
 
 # 将证书复制到所有master主节点
 for i in master110 master120 master130;\
-do scp /opt/cert/kube-controller-manager*.pem $i:/opt/kubernetes/server/bin/cert;done
+do scp /opt/cert/kube-controller-manager*.pem \
+$i:/opt/kubernetes/server/bin/cert;done
 ```
 
 > CN 为 system:kube-controller-manager , O 为 system:kube-controller-manager
@@ -1677,7 +1768,8 @@ kube-scheduler-csr.json | cfssljson -bare kube-scheduler
 
 # 将证书复制到所有主节点
 for i in master110 master120 master130;\
-do scp /opt/cert/kube-scheduler*.pem $i:/opt/kubernetes/server/bin/cert;done
+do scp /opt/cert/kube-scheduler*.pem \
+$i:/opt/kubernetes/server/bin/cert;done
 ```
 
 ##### 8.5.2 创建配置文件
@@ -1812,6 +1904,18 @@ sed -i 's@k8s.gcr.io/pause:3.6@registry.aliyuncs.com/google_containers/pause:3.6
               endpoint = ["http://f1361db2.m.daocloud.io"]
          [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
               endpoint = ["http://hub-mirror.c.163.com"]
+
+# 改成私有仓库，注意需关闭 tls
+[plugins."io.containerd.grpc.v1.cri".registry.configs]
+     [plugins."io.containerd.grpc.v1.cri".registry.configs."k8s.nexus".tls]
+        insecure_skip_verify = true
+     [plugins."io.containerd.grpc.v1.cri".registry.configs."k8s.nexus".auth]
+        username = "admin"
+        password = "password"
+
+[plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+     [plugins."io.containerd.grpc.v1.cri".registry.mirrors."k8s.nexus"]
+        endpoint = ["http://192.168.57.31:8090"]
 ```
 
 ##### 9.1.2 安装runc依赖
@@ -1907,10 +2011,12 @@ kubelet-csr.json | cfssljson -bare kubelet
 
 ```shell
 for i in master110 master120 master130;\
-do scp /opt/cert/kubelet*.pem $i:/opt/kubernetes/server/bin/cert;done
+do scp /opt/cert/kubelet*.pem \
+$i:/opt/kubernetes/server/bin/cert;done
 
 for i in master110 master120 master130;\
-do scp /opt/cert/ca*.pem $i:/opt/kubernetes/server/bin/cert;done
+do scp /opt/cert/ca*.pem \
+$i:/opt/kubernetes/server/bin/cert;done
 ```
 
 ##### 9.2.2 生成kubelet配置文件及脚本
@@ -1950,6 +2056,9 @@ kubectl create clusterrolebinding cluster-system-anonymous \
 kubectl create clusterrolebinding kubelet-bootstrap \
 --clusterrole=system:node-bootstrapper --user=kubelet-bootstrap \
 --kubeconfig=config/kubelet-bootstrap.config
+
+kubectl create clusterrolebinding kubelet-client \
+--clusterrole=cluster-admin --user=kubelet-client
 ```
 
 ```powershell
@@ -2087,9 +2196,41 @@ kubectl certificate approve node-csr-BbHAG2ba...
 kubectl get csr | grep Pending | awk '{print $1}' | xargs kubectl certificate approve
 ```
 
+##### 9.2.4 遇到问题
+
+1.failed to run Kubelet: failed to create kubelet: get remote runtime typed version failed: rpc error: code = Unimplemented desc = unknown service runtime.v1alpha2.RuntimeService
+
+该问题涉及运行时runtime，即containerd，可以先查看containerd日志是否有异常，若无异常则可重试containerd后再重启kubelet。若仍未解决则参考[解决方式]([k8s部署问题集锦（一） kubelet 启动报错failed to run Kubelet unable to determine runtime-pudn.com](https://www.pudn.com/news/62a36e3b3934cd25af765c26.html))
+
+2.kubelet 出现下面错误: Failed to contact API server when waiting for CSINode publishing: csinodes.storage.k8s.io "k8s.node1" is forbidden: User "system:node:node01" cannot get resource "csinodes" in API group "storage.k8s.io" at the cluster scope: can only access CSINode with the same name as the requesting node
+
+节点中出现了名称：node01，该主机名与当前存在的主机名不符，导致无法连接到ApiServer. 可以通过cfssl命令查看证书来求证。
+
+```shell
+# 首先将 cert/kubelet-client-current.pem 复制一份
+# 然后将其中的-----BEGIN EC PRIVATE KEY-----部分移除
+# 最后执行命令即可看到 system:node:node01
+cfssl certinfo -cert cert/kubelet-client-current.bak.pem
+```
+
+遇到次状况是因为主机hostname没有调整为预先设置的主机名，可通过一下命令设置:
+
+```shell
+hostnamectl --static set-hostname  master110
+```
+
+设置完成后注意，先暂停kubelet，然后将 /opt/kubernetes/server/bin 下面kubelet的相关配置删除，最后再重启kubelet即可：
+
+```shell
+rm -fr config/kubelet.kubeconfig
+rm -fr cert/kubelet-client-current.*
+
+supervisorctl start kubelet
+```
+
 #### 9.3 部署 kube-proxy
 
-##### 9.3.1 申请证书
+##### 9.3.1 申请证书j
 
 ```shell
 cd /opt/cert
@@ -2237,6 +2378,11 @@ curl https://raw.githubusercontent.com/projectcalico/calico/v3.24.0/manifests/ca
 ```yaml
 3683    - name: CALICO_IPV4POOL_CIDR
 3684      value: "172.7.0.0/16"
+
+
+# 同时在 name: CLUSTER_TYPE 下方新增下方的配置，让calico绑定到指定网卡
+- name: IP_AUTODETECTION_METHOD
+  value: "interface=eth0"
 ```
 
 启动：
@@ -2295,9 +2441,45 @@ do scp k8s.1.24.3.tar $i:/opt;done
 ctr -n k8s.io image import /opt/k8s.1.24.3.tar
 ```
 
-#### 10.2 遇到的问题
+#### 10.2 下载calicoctl
 
-<mark>最终发现时间原因是因为 config.toml 配置文件使用了旧版. 直接使用containerd生成默认配置文件后简单修改即可， 参考 9.1.1。故该解决方案可忽略</mark>
+注意calicoctl 需要与calico.yml中的版本一致
+
+```shell
+curl -O -L  https://github.com/projectcalico/calico/releases/download/v3.24.0/calicoctl-linux-amd64
+mv calicoctl-linux-amd64 /usr/local/bin/calicoctl
+chmod +x /usr/local/bin/calicoctl
+
+
+mkdir /etc/calico
+
+cat > /etc/calico/calicoctl.cfg << EOF
+apiVersion: projectcalico.org/v3
+kind: CalicoAPIConfig
+metadata:
+spec:
+  datastoreType: "kubernetes"
+  kubeconfig: "/root/.kube/config"
+EOF
+
+
+[root@k8s opt]# calicoctl node status
+Calico process is running.
+
+IPv4 BGP status
++--------------+-------------------+-------+----------+---------+
+| PEER ADDRESS |     PEER TYPE     | STATE |  SINCE   |  INFO   |
++--------------+-------------------+-------+----------+---------+
+| 192.168.127.110| node-to-node mesh | start | 12:11:20 | Passive |
++--------------+-------------------+-------+----------+---------+
+
+IPv6 BGP status
+No IPv6 peers found.
+```
+
+#### 10.3 遇到的问题
+
+1. <mark>最终发现时间原因是因为 config.toml 配置文件使用了旧版. 直接使用containerd生成默认配置文件后简单修改即可， 参考 9.1.1。故该解决方案可忽略</mark>
 
 ```shell
 [root@master120 opt]# kubectl get pods -A
@@ -2328,6 +2510,15 @@ W0820 02:37:06.455820       1 client_config.go:617] Neither --kubeconfig nor --m
           hostPath:
             path: /opt/kubernetes/server/bin/cert/
 ```
+
+2. calico-kube-controller 状态一直是 pending
+   
+   该情况很可能是因为存在污点 taints， 可通过 kubectl describe 查看。移除相关污点参考：
+   
+   ```shell
+   kubectl taint node k8s.node3 node.kubernetes.io/not-ready:NoSchedule-
+   kubectl taint node k8s.node3 node.kubernetes.io/disk-pressure:NoSchedule-
+   ```
 
 ### 11. 安装CoreDNS
 
@@ -2576,12 +2767,12 @@ $ helm install $NAMESPACE/mychart
 yum -y install nfs-server nfs-utils
 
 # 创建共享目录
-mkdir /data/nfs/k8s -p
+mkdir /data/nfs -p
 
 # 配置
 #前面是共享目录，* 代表所有ip或主机，fsid、anonuid、anongid是给从节点写入权限，0代表root用户
 cat >/etc/exports <<EOF 
-/data/nfs/k8s 192.168.127.0/24(rw,sync,fsid=0,anonuid=0,anongid=0)
+/data/nfs 192.168.127.0/24(rw,sync,fsid=0,anonuid=0,anongid=0)
 EOF
 
 #配置生效
@@ -2591,14 +2782,14 @@ exportfs -r
 [root@master110 ~]# exportfs
 /data/nfs/k8s     192.168.127.0/24
 
-#启动rpcbind、nfs服务
+#启动rpcbind、nfs服务，nfs 默认端口是2049
 systemctl start nfs-server rpcbind
 systemctl enable nfs-server rpcbind
 
 # 查看 nfs 是否就绪
 [root@master110 ~]# showmount -e
 Export list for master110:
-/data/nfs/k8s 192.168.127.0/24
+/data/nfs 192.168.127.0/24
 ```
 
 ##### 13.1.2 安装 nfs 客户端
@@ -2606,7 +2797,7 @@ Export list for master110:
 在master120 , master130 上安装 nfs 客户端
 
 ```powershell
-systemctl start nfs-server rpcbind
+yum -y install nfs-utils
 # 启动rpc
 systemctl restart rpcbind && systemctl enable rpcbind
 
@@ -2616,9 +2807,9 @@ Export list for 192.168.127.110:
 /data/nfs/k8s 192.168.127.0/24
 
 # 创建目录
-mkdir /data/nfs/k8s -pr
+mkdir /data/nfs -p
 # 挂载
-mount -t nfs 192.168.127.110:/data/nfs/k8s /data/nfs/k8s
+mount -t nfs 192.168.127.110:/data/nfs/ /data/nfs
 # 如果想要开机自动将共享目录挂载到本地,往/etc/fstab 中追加：
 echo "192.168.127.110:/data/nfs/k8s /data/nfs/k8s nfs defaults 0 0" >> /etc/fstab
 ```
@@ -2637,9 +2828,9 @@ cd nfs-subdir-external-provisioner
 vim values.yaml
 
 kubectl create ns nfs
-helm install nfs-subdir-external-provisioner . -n nfs \
+helm install kuboard . -n nfs \
 --set nfs.server=192.168.127.110 \
---set nfs.path=/data/nfs/k8s
+--set nfs.path=/data/nfs/kuboard
 
 # 执行结果 
 [root@master130 nfs-subdir-external-provisioner]# helm install  nfs-subdir-external-provisioner . -n nfs
@@ -2653,7 +2844,7 @@ TEST SUITE: None
 # 镜像拉取失败
 [root@master130 nfs-subdir-external-provisioner]# helm install  nfs-subdir-external-provisioner . -n nfs \
 --set nfs.server=192.168.127.110 \
---set nfs.path=/data/nfs/k8s
+--set nfs.path=/data/nfs/kuboard
 NAMESPACE     NAME                                               READY   STATUS             RESTARTS   AGE
 kube-system   calico-kube-controllers-5b97f5d8cf-gpng8           1/1     Running            0          7h42m
 kube-system   calico-node-j5hqp                                  1/1     Running            0          7h42m
@@ -2694,7 +2885,83 @@ NAME                    PROVISIONER                                     RECLAIMP
 nfs-storage (default)   cluster.local/nfs-subdir-external-provisioner   Delete          Immediate           true                   38s
 ```
 
-#### 13.2 安装
+##### 13.1.4 遇到的问题
+
+1. 在nfs客户端执行命令 showmount -e 192.168.127.110 提示以下错误
+   
+   ```shell
+   clnt_create: RPC: Port mapper failure - Unable to receive: errno 113 (No route to host)
+   
+   # 或者
+   rpc mount export: RPC: Unable to receive; errno = No route to host
+   ```
+   
+   这是因为nfs客户端无法连接到nfs服务器相关端口，通常是因为nfs服务端防火墙没有开放相关端口。进入nfs服务端打开nfs配置文件
+   
+   ```shell
+   vim /etc/sysconfig/nfs
+   
+   # 将下面配置注释打开 
+   LOCKD_TCPPORT=32803
+   LOCKD_UDPPORT=32769
+   MOUNTD_PORT=892
+   STATD_OUTGOING_PORT=2020
+   
+   # 将配置爱保存后重启服务, 由于此处直接restart无效，故先停止后启动
+   systemctl stop nfs
+   systemctl start nfs
+   
+   # 重启后再服务端查看端口监听情况
+   netstat -ltnp|grep 32803
+   netstat -ltnp|grep 32769
+   netstat -ltnp|grep 892
+   
+   # 最后修改 iptables 配置文件 /etc/sysconfig/iptables,增加以下规则
+   -A INPUT -p udp -m state --state NEW -m udp --dport 111 -j ACCEPT
+   -A INPUT -p tcp -m state --state NEW -m tcp --dport 111 -j ACCEPT
+   -A INPUT -p tcp -m state --state NEW -m tcp --dport 2049 -j ACCEPT
+   -A INPUT -p tcp -m state --state NEW -m tcp --dport 32803 -j ACCEPT
+   -A INPUT -p udp -m state --state NEW -m udp --dport 32769 -j ACCEPT
+   -A INPUT -p tcp -m state --state NEW -m tcp --dport 892 -j ACCEPT
+   -A INPUT -p udp -m state --state NEW -m udp --dport 892 -j ACCEPT
+   -A INPUT -p tcp -m state --state NEW -m tcp --dport 875 -j ACCEPT
+   -A INPUT -p udp -m state --state NEW -m udp --dport 875 -j ACCEPT
+   -A INPUT -p tcp -m state --state NEW -m tcp --dport 662 -j ACCEPT
+   -A INPUT -p udp -m state --state NEW -m udp --dport 662 -j ACCEPT
+   
+   # nfs 客户端查看服务端端口列表
+   [root@k8s opt]# rpcinfo  -p 192.168.127.110
+      program vers proto   port  service
+       100000    4   tcp    111  portmapper
+       100000    3   tcp    111  portmapper
+       100000    2   tcp    111  portmapper
+       100000    4   udp    111  portmapper
+       100000    3   udp    111  portmapper
+       100000    2   udp    111  portmapper
+       100024    1   udp  39295  status
+       100024    1   tcp  47235  status
+       100005    1   udp    892  mountd
+       100005    1   tcp    892  mountd
+       100005    2   udp    892  mountd
+       100005    2   tcp    892  mountd
+       100005    3   udp    892  mountd
+       100005    3   tcp    892  mountd
+       100003    3   tcp   2049  nfs
+       100003    4   tcp   2049  nfs
+       100227    3   tcp   2049  nfs_acl
+       100003    3   udp   2049  nfs
+       100227    3   udp   2049  nfs_acl
+       100021    1   udp  32769  nlockmgr
+       100021    3   udp  32769  nlockmgr
+       100021    4   udp  32769  nlockmgr
+       100021    1   tcp  32803  nlockmgr
+       100021    3   tcp  32803  nlockmgr
+       100021    4   tcp  32803  nlockmgr
+   ```
+   
+   此时回到nfs客户端继续执行 showmount 即可。若客户端仍然执行失败，则可以在客户端查看服务端启动的哪些端口，然后再把查询到的端口一一加到服务端的防火墙中。<mark>不过最后不要这么做，因为此时nfs端口是随机的</mark>
+
+#### 13.2 安装 Kuboard
 
 使用 hostPath 提供持久化方式安装。但是结果却出现未知错误
 
@@ -2772,6 +3039,50 @@ netstat -ltunp|grep 10255|awk '{print $7}'|awk -F "/" '{system("echo "$1";kill -
 
 1. etcd 集群出错，删除etcd所有数据后重启(<mark>切记不能这么做</mark>， 可以先做备份)，导致apiserver也重启。重启完成后 kubectl get pods -A 无数据，此时需要重启kubelet
 
-#### 15. 待办
+端口无法连通问题：
 
-1. 部署完成集群后备份etcd数据，然后再恢复，查看恢复情况
+1. 查看防火墙是否已关闭
+   
+   ```shell
+   systemctl status iptables.service 
+   systemctl status firewalld.service
+   ```
+
+2. 若程序运行在容器中，则确认容器运行时使用的docker还是containerd, 若是docker 则可以在docker daemon配置 --iptables = false来关闭 iptables。 若不想通过修改 docker daemon 的方式则只能修改 iptables配置文件：
+   
+   <mark>永久修改</mark>：
+   
+    vim /etc/sysconfig/iptables
+   
+   > 注意下面的规则一定放在下方规则的前方，否则规则会被all类型的规则过滤掉 
+   > 
+   > REJECT     all  --  0.0.0.0/0            0.0.0.0/0            reject-with icmp-host-prohibited
+   
+   ```shell
+   -A INPUT -p tcp -m tcp --dport 16443 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 2380 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 2379 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 6443 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 10250 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 10255 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 10257 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 10259 -j ACCEPT
+   ```
+   
+   <mark>临时修改</mark>
+   
+   ```
+   iptables-save
+   iptables -I INPUT -p tcp --dport 2380 -j ACCEPT
+   iptables -I INPUT -p tcp --dport 2049 -j ACCEPT
+   iptables-save
+   ```
+   
+   重启
+   
+   ```shell
+   service iptables restart
+   service iptables save
+   ```
+
+#### 15. 待办
