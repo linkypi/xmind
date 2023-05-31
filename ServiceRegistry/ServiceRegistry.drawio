@@ -1,1 +1,238 @@
-<mxfile host="Electron" modified="2021-12-25T13:23:35.562Z" agent="5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/14.1.8 Chrome/87.0.4280.88 Electron/11.1.1 Safari/537.36" etag="MnDhpnNCupNgDBNmkITL" version="14.1.8" type="device" pages="2"><diagram id="kRw7cM3X4UHfkaxSUSuG" name="注册中心对比">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</diagram><diagram id="wE0yyuz3Qu7EaQKDD6G_" name="Eureka 内部机制">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</diagram></mxfile>
+<mxfile host="Electron" modified="2023-05-31T06:06:01.732Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.1.2 Chrome/106.0.5249.199 Electron/21.4.3 Safari/537.36" etag="_AqX7oH8WrK0VNSJWg9h" version="21.1.2" type="device" pages="3">
+  <diagram id="kRw7cM3X4UHfkaxSUSuG" name="注册中心对比">
+    <mxGraphModel dx="1434" dy="844" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-1" value="各服务注册中心对比" style="shape=table;html=1;whiteSpace=wrap;startSize=50;container=1;collapsible=0;childLayout=tableLayout;fontStyle=1;align=left;fontSize=17;strokeWidth=2;strokeColor=#4D4D4D;" parent="1" vertex="1">
+          <mxGeometry x="80" y="110" width="960" height="510" as="geometry" />
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-2" value="" style="shape=partialRectangle;html=1;whiteSpace=wrap;collapsible=0;dropTarget=0;pointerEvents=0;fillColor=none;top=0;left=0;bottom=0;right=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="LdmUbJwT6B3DBPml8lAT-1" vertex="1">
+          <mxGeometry y="50" width="960" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-3" value="" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="LdmUbJwT6B3DBPml8lAT-2" vertex="1">
+          <mxGeometry width="129" height="60" as="geometry">
+            <mxRectangle width="129" height="60" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-4" value="集群模式" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;fontStyle=1;fontSize=14;" parent="LdmUbJwT6B3DBPml8lAT-2" vertex="1">
+          <mxGeometry x="129" width="256" height="60" as="geometry">
+            <mxRectangle width="256" height="60" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-5" value="一致性(CAP)" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;fontStyle=1;fontSize=14;" parent="LdmUbJwT6B3DBPml8lAT-2" vertex="1">
+          <mxGeometry x="385" width="191" height="60" as="geometry">
+            <mxRectangle width="191" height="60" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-17" value="服务注册发现时效性" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;fontStyle=1;fontSize=14;" parent="LdmUbJwT6B3DBPml8lAT-2" vertex="1">
+          <mxGeometry x="576" width="192" height="60" as="geometry">
+            <mxRectangle width="192" height="60" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-14" value="容量" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="LdmUbJwT6B3DBPml8lAT-2" vertex="1">
+          <mxGeometry x="768" width="192" height="60" as="geometry">
+            <mxRectangle width="192" height="60" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-6" value="" style="shape=partialRectangle;html=1;whiteSpace=wrap;collapsible=0;dropTarget=0;pointerEvents=0;fillColor=none;top=0;left=0;bottom=0;right=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="LdmUbJwT6B3DBPml8lAT-1" vertex="1">
+          <mxGeometry y="110" width="960" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-7" value="Eureka" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;fontStyle=1;fontSize=14;" parent="LdmUbJwT6B3DBPml8lAT-6" vertex="1">
+          <mxGeometry width="129" height="130" as="geometry">
+            <mxRectangle width="129" height="130" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-8" value="集群中的每个机器都是对等节点, 各服务可以向 Eureka任意节点注册机发现服务, 集群中任意Eureka节点接收到写请求后, 会自动同步到其他所有的 Eureka 节点" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="LdmUbJwT6B3DBPml8lAT-6" vertex="1">
+          <mxGeometry x="129" width="256" height="130" as="geometry">
+            <mxRectangle width="256" height="130" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-9" value="高可用性(AP), 任意节点宕机后其他节点都可以正常提供服务" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="LdmUbJwT6B3DBPml8lAT-6" vertex="1">
+          <mxGeometry x="385" width="191" height="130" as="geometry">
+            <mxRectangle width="191" height="130" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-18" value="默认时效性较差,服务发现可能需要几十秒" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="LdmUbJwT6B3DBPml8lAT-6" vertex="1">
+          <mxGeometry x="576" width="192" height="130" as="geometry">
+            <mxRectangle width="192" height="130" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-15" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="LdmUbJwT6B3DBPml8lAT-6" vertex="1">
+          <mxGeometry x="768" width="192" height="130" as="geometry">
+            <mxRectangle width="192" height="130" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-10" value="" style="shape=partialRectangle;html=1;whiteSpace=wrap;collapsible=0;dropTarget=0;pointerEvents=0;fillColor=none;top=0;left=0;bottom=0;right=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="LdmUbJwT6B3DBPml8lAT-1" vertex="1">
+          <mxGeometry y="240" width="960" height="135" as="geometry" />
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-11" value="ZooKeeper" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;fontSize=14;fontStyle=1" parent="LdmUbJwT6B3DBPml8lAT-10" vertex="1">
+          <mxGeometry width="129" height="135" as="geometry">
+            <mxRectangle width="129" height="135" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-12" value="集群存在两种角色 Leader + Follower, 仅有 Leader 才可以注册服务, 注册完成后同时会同步到其他 Follower 节点. 服务发现时可以从任意节点读取数据. (服务提供者向注册中心注册服务时会创建一个临时节点, 同时服务消费者发现服务时会使用 watcher 监听相关节点的数据变化, 当服务提供者列表发生变化时会自动通知服务消费者)" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="LdmUbJwT6B3DBPml8lAT-10" vertex="1">
+          <mxGeometry x="129" width="256" height="135" as="geometry">
+            <mxRectangle width="256" height="135" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-13" value="强一致性(CP), 主节点宕机后集群会重新选主 (+数据复制) , 此时服务不可用" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="LdmUbJwT6B3DBPml8lAT-10" vertex="1">
+          <mxGeometry x="385" width="191" height="135" as="geometry">
+            <mxRectangle width="191" height="135" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-19" value="时效性更好, 服务注册或崩溃时可以通过监听机制快速响应" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="LdmUbJwT6B3DBPml8lAT-10" vertex="1">
+          <mxGeometry x="576" width="192" height="135" as="geometry">
+            <mxRectangle width="192" height="135" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-16" value="不适合大规模的服务实例,因为服务上下线时需要瞬间推送数据通知到其他实例" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="LdmUbJwT6B3DBPml8lAT-10" vertex="1">
+          <mxGeometry x="768" width="192" height="135" as="geometry">
+            <mxRectangle width="192" height="135" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-20" style="shape=partialRectangle;html=1;whiteSpace=wrap;collapsible=0;dropTarget=0;pointerEvents=0;fillColor=none;top=0;left=0;bottom=0;right=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="LdmUbJwT6B3DBPml8lAT-1" vertex="1">
+          <mxGeometry y="375" width="960" height="135" as="geometry" />
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-21" value="Nacos" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;fontSize=14;fontStyle=1" parent="LdmUbJwT6B3DBPml8lAT-20" vertex="1">
+          <mxGeometry width="129" height="135" as="geometry">
+            <mxRectangle width="129" height="135" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-22" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="LdmUbJwT6B3DBPml8lAT-20" vertex="1">
+          <mxGeometry x="129" width="256" height="135" as="geometry">
+            <mxRectangle width="256" height="135" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-23" value="1. 注册中心,&amp;nbsp;&lt;span style=&quot;color: rgb(51 , 51 , 51) ; font-family: &amp;#34;open sans&amp;#34; , sans-serif ; font-size: 14px ; background-color: rgb(255 , 255 , 255)&quot;&gt;服务注册选择临时则走AP, 选择永久则走CP&lt;/span&gt;&lt;br&gt;&lt;br&gt;2. 配置中心(CP)" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;align=left;" parent="LdmUbJwT6B3DBPml8lAT-20" vertex="1">
+          <mxGeometry x="385" width="191" height="135" as="geometry">
+            <mxRectangle width="191" height="135" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-24" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="LdmUbJwT6B3DBPml8lAT-20" vertex="1">
+          <mxGeometry x="576" width="192" height="135" as="geometry">
+            <mxRectangle width="192" height="135" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LdmUbJwT6B3DBPml8lAT-25" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="LdmUbJwT6B3DBPml8lAT-20" vertex="1">
+          <mxGeometry x="768" width="192" height="135" as="geometry">
+            <mxRectangle width="192" height="135" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="wE0yyuz3Qu7EaQKDD6G_" name="Eureka 内部机制">
+    <mxGraphModel dx="1434" dy="844" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-0" />
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-1" parent="8bjAOmehQ7RUQTo-V6dw-0" />
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-2" value="&lt;h1&gt;服务注册流程&lt;/h1&gt;&lt;p&gt;1. 服务提供者启动后向 Eureka 注册服务, 同时启动心跳服务每隔 30 秒向 Eureka 发送心跳以确保服务正常&lt;/p&gt;&lt;p&gt;2. Eureka 接收到服务提供者注册的服务后, 会在本地注册表记录服务信息,同时同步到 ReadWriteCache (&lt;font color=&quot;#ff3333&quot;&gt;默认 180 秒自动过期&lt;/font&gt;), 服务提供者在当前节点注册完成后会将该信息同步到其他各个 Eureka节点&lt;/p&gt;&lt;p&gt;3. Eureka 会启动定时任务将 ReadWriteCache 定时同步到 ReadOnlyCache, 以便服务消费者可以正常访问&lt;/p&gt;&lt;p&gt;&lt;span&gt;4. 服务消费者会每隔 30 秒从 ReadOnlyCache&amp;nbsp; 拉取一次服务注册表的信息, 若 ReadOnlyCache 没有则从 ReadWriteCache 中获取, 再没有则从服务注册表中获取.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span&gt;5. 服务消费者首次从 Eureka 拉取全量数据, 此后便增量拉取. 此后每次拉取时都会带上服务端全量数据的 hashcode, 若 Eureka 的 hashcode 与本地 hashcode 不一致则会开启全量拉取&lt;/span&gt;&lt;/p&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;fontSize=14;align=left;" parent="8bjAOmehQ7RUQTo-V6dw-1" vertex="1">
+          <mxGeometry x="40" y="30" width="430" height="350" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-4" value="Eureka" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#d6b656;strokeWidth=2;fontSize=21;align=center;verticalAlign=top;fillColor=#fff2cc;" parent="8bjAOmehQ7RUQTo-V6dw-1" vertex="1">
+          <mxGeometry x="410" y="440" width="420" height="390" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=14;" parent="8bjAOmehQ7RUQTo-V6dw-1" source="8bjAOmehQ7RUQTo-V6dw-5" target="8bjAOmehQ7RUQTo-V6dw-14" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-16" value="每隔 30 秒拉取一次" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;" parent="8bjAOmehQ7RUQTo-V6dw-15" vertex="1" connectable="0">
+          <mxGeometry x="0.5032" y="-2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-5" value="ReadOnlyCache" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#4D4D4D;strokeWidth=2;fontSize=14;align=center;" parent="8bjAOmehQ7RUQTo-V6dw-1" vertex="1">
+          <mxGeometry x="460" y="520" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fontSize=14;" parent="8bjAOmehQ7RUQTo-V6dw-1" source="8bjAOmehQ7RUQTo-V6dw-6" target="8bjAOmehQ7RUQTo-V6dw-5" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-25" value="间隔 30s 定时同步" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;" parent="8bjAOmehQ7RUQTo-V6dw-13" vertex="1" connectable="0">
+          <mxGeometry x="0.1143" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-6" value="ReadWriteCache" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#4D4D4D;strokeWidth=2;fontSize=14;align=center;" parent="8bjAOmehQ7RUQTo-V6dw-1" vertex="1">
+          <mxGeometry x="460" y="650" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=14;" parent="8bjAOmehQ7RUQTo-V6dw-1" source="8bjAOmehQ7RUQTo-V6dw-7" target="8bjAOmehQ7RUQTo-V6dw-6" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-12" value="立马同步" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;" parent="8bjAOmehQ7RUQTo-V6dw-8" vertex="1" connectable="0">
+          <mxGeometry x="0.0444" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-7" value="服务注册表" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#4D4D4D;strokeWidth=2;fontSize=14;align=center;" parent="8bjAOmehQ7RUQTo-V6dw-1" vertex="1">
+          <mxGeometry x="674" y="650" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=14;" parent="8bjAOmehQ7RUQTo-V6dw-1" source="8bjAOmehQ7RUQTo-V6dw-9" target="8bjAOmehQ7RUQTo-V6dw-7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-11" value="注册服务" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;" parent="8bjAOmehQ7RUQTo-V6dw-10" vertex="1" connectable="0">
+          <mxGeometry x="0.1833" y="1" relative="1" as="geometry">
+            <mxPoint x="-8" y="9" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.133;entryDx=0;entryDy=0;entryPerimeter=0;fontSize=14;" parent="8bjAOmehQ7RUQTo-V6dw-1" source="8bjAOmehQ7RUQTo-V6dw-9" target="8bjAOmehQ7RUQTo-V6dw-7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-27" value="每隔 30 秒发送一次心跳" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;" parent="8bjAOmehQ7RUQTo-V6dw-26" vertex="1" connectable="0">
+          <mxGeometry x="0.2123" y="-4" relative="1" as="geometry">
+            <mxPoint x="15" y="-13.99" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-9" value="服务提供者1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#4D4D4D;strokeWidth=2;fontSize=14;align=center;" parent="8bjAOmehQ7RUQTo-V6dw-1" vertex="1">
+          <mxGeometry x="860" y="730" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-14" value="服务消费者" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#4D4D4D;strokeWidth=2;fontSize=14;align=center;" parent="8bjAOmehQ7RUQTo-V6dw-1" vertex="1">
+          <mxGeometry x="230" y="690" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-17" value="服务提供者1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#4D4D4D;strokeWidth=2;fontSize=14;align=center;" parent="8bjAOmehQ7RUQTo-V6dw-1" vertex="1">
+          <mxGeometry x="870" y="740" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-18" value="服务提供者1.2.3..." style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#82b366;strokeWidth=2;fontSize=14;align=center;fillColor=#d5e8d4;" parent="8bjAOmehQ7RUQTo-V6dw-1" vertex="1">
+          <mxGeometry x="880" y="750" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-20" value="服务消费者" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#4D4D4D;strokeWidth=2;fontSize=14;align=center;" parent="8bjAOmehQ7RUQTo-V6dw-1" vertex="1">
+          <mxGeometry x="240" y="700" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-21" value="服务消费者1.2.3..." style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6c8ebf;strokeWidth=2;fontSize=14;align=center;fillColor=#dae8fc;" parent="8bjAOmehQ7RUQTo-V6dw-1" vertex="1">
+          <mxGeometry x="250" y="710" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fontSize=14;" parent="8bjAOmehQ7RUQTo-V6dw-1" source="8bjAOmehQ7RUQTo-V6dw-23" target="8bjAOmehQ7RUQTo-V6dw-6" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-23" value="定时同步线程" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;strokeColor=#4D4D4D;strokeWidth=2;fontSize=14;align=center;" parent="8bjAOmehQ7RUQTo-V6dw-1" vertex="1">
+          <mxGeometry x="490" y="740" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-29" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=14;" parent="8bjAOmehQ7RUQTo-V6dw-1" source="8bjAOmehQ7RUQTo-V6dw-28" target="8bjAOmehQ7RUQTo-V6dw-7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-28" value="间隔60s定时检查线程" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;strokeColor=#4D4D4D;strokeWidth=2;fontSize=14;align=center;fontColor=#FF3333;" parent="8bjAOmehQ7RUQTo-V6dw-1" vertex="1">
+          <mxGeometry x="704" y="550" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-30" value="若发现某个服务在 90 秒内没有收到心跳则在服务注册表及 ReadWrite缓存中移除该服务" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#FF3333;" parent="8bjAOmehQ7RUQTo-V6dw-1" vertex="1">
+          <mxGeometry x="669" y="480" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="8bjAOmehQ7RUQTo-V6dw-31" value="&lt;h1&gt;服务故障流程&lt;/h1&gt;&lt;p&gt;1. 每个Eureka 都会启动一个定时检查服务, 用于检查某个服务接收心跳的时间是否已超过 90 秒, 若超过则将该服务在服务注册表及 ReadWriteCache中移除&lt;/p&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;fontSize=14;align=left;" parent="8bjAOmehQ7RUQTo-V6dw-1" vertex="1">
+          <mxGeometry x="530" y="40" width="430" height="170" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="WAoYasPDIlN3xmhbVt-p" name="Nacos内部机制">
+    <mxGraphModel dx="1434" dy="844" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="vu5OTwElyRMr-OkXsX9--1" value="Text" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="265" y="225" width="50" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="vu5OTwElyRMr-OkXsX9--3" value="&lt;pre style=&quot;background-color: rgb(41, 42, 48); font-family: Consolas, monospace; font-size: 10.5pt;&quot;&gt;&lt;span style=&quot;font-weight: bold;&quot;&gt;&lt;font color=&quot;#009900&quot;&gt;// 超过15s后被标记为不健康实例&lt;/font&gt;&lt;font color=&quot;#f97bb0&quot;&gt;&lt;br&gt;public static final long &lt;/font&gt;&lt;/span&gt;&lt;span style=&quot;color: rgb(73, 176, 206); font-style: italic;&quot;&gt;DEFAULT_HEART_BEAT_TIMEOUT &lt;/span&gt;&lt;font color=&quot;#dfdfe0&quot;&gt;= &lt;/font&gt;&lt;span style=&quot;color: rgb(130, 230, 255);&quot;&gt;TimeUnit&lt;/span&gt;&lt;font color=&quot;#dfdfe0&quot;&gt;.&lt;/font&gt;&lt;span style=&quot;color: rgb(73, 176, 206); font-style: italic;&quot;&gt;SECONDS&lt;/span&gt;&lt;font color=&quot;#dfdfe0&quot;&gt;.&lt;/font&gt;&lt;span style=&quot;color: rgb(117, 194, 179);&quot;&gt;toMillis&lt;/span&gt;&lt;font color=&quot;#dfdfe0&quot;&gt;(&lt;/font&gt;&lt;span style=&quot;color: rgb(215, 199, 129);&quot;&gt;15&lt;/span&gt;&lt;font color=&quot;#dfdfe0&quot;&gt;);&lt;br&gt;&lt;/font&gt;&lt;pre style=&quot;border-color: var(--border-color); font-family: Consolas, monospace; font-size: 10.5pt;&quot;&gt;&lt;font style=&quot;border-color: var(--border-color);&quot; color=&quot;#009900&quot;&gt;// 超过30s后不健康实例被移除&lt;/font&gt;&lt;font style=&quot;border-color: var(--border-color);&quot; color=&quot;#f97bb0&quot;&gt;&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;&lt;/font&gt;&lt;/pre&gt;&lt;span style=&quot;color: rgb(249, 123, 176); font-weight: bold;&quot;&gt;public static final long &lt;/span&gt;&lt;span style=&quot;color: rgb(73, 176, 206); font-style: italic;&quot;&gt;DEFAULT_IP_DELETE_TIMEOUT &lt;/span&gt;&lt;font color=&quot;#dfdfe0&quot;&gt;= &lt;/font&gt;&lt;span style=&quot;color: rgb(130, 230, 255);&quot;&gt;TimeUnit&lt;/span&gt;&lt;font color=&quot;#dfdfe0&quot;&gt;.&lt;/font&gt;&lt;span style=&quot;color: rgb(73, 176, 206); font-style: italic;&quot;&gt;SECONDS&lt;/span&gt;&lt;font color=&quot;#dfdfe0&quot;&gt;.&lt;/font&gt;&lt;span style=&quot;color: rgb(117, 194, 179);&quot;&gt;toMillis&lt;/span&gt;&lt;font color=&quot;#dfdfe0&quot;&gt;(&lt;/font&gt;&lt;span style=&quot;color: rgb(215, 199, 129);&quot;&gt;30&lt;/span&gt;&lt;font color=&quot;#dfdfe0&quot;&gt;);&lt;br&gt;&lt;/font&gt;&lt;pre style=&quot;border-color: var(--border-color); font-family: Consolas, monospace; font-size: 10.5pt;&quot;&gt;&lt;font style=&quot;border-color: var(--border-color);&quot; color=&quot;#009900&quot;&gt;// 心跳周期为 5s&lt;/font&gt;&lt;font style=&quot;border-color: var(--border-color);&quot; color=&quot;#f97bb0&quot;&gt;&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;&lt;/font&gt;&lt;/pre&gt;&lt;span style=&quot;color: rgb(249, 123, 176); font-weight: bold;&quot;&gt;public static final long &lt;/span&gt;&lt;span style=&quot;color: rgb(73, 176, 206); font-style: italic;&quot;&gt;DEFAULT_HEART_BEAT_INTERVAL &lt;/span&gt;&lt;font color=&quot;#dfdfe0&quot;&gt;= &lt;/font&gt;&lt;span style=&quot;color: rgb(130, 230, 255);&quot;&gt;TimeUnit&lt;/span&gt;&lt;font color=&quot;#dfdfe0&quot;&gt;.&lt;/font&gt;&lt;span style=&quot;color: rgb(73, 176, 206); font-style: italic;&quot;&gt;SECONDS&lt;/span&gt;&lt;font color=&quot;#dfdfe0&quot;&gt;.&lt;/font&gt;&lt;span style=&quot;color: rgb(117, 194, 179);&quot;&gt;toMillis&lt;/span&gt;&lt;font color=&quot;#dfdfe0&quot;&gt;(&lt;/font&gt;&lt;span style=&quot;color: rgb(215, 199, 129);&quot;&gt;5&lt;/span&gt;&lt;font color=&quot;#dfdfe0&quot;&gt;);&lt;/font&gt;&lt;/pre&gt;" style="text;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="70" width="660" height="140" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
