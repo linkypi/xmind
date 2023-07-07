@@ -26,12 +26,13 @@ for i in k8s.master1 k8s.master2 k8s.master3 ;do ssh-copy-id -i /root/.ssh/id_rs
 ### 2. 下载脚本工具 ezdown
 
 ```sh
-export release=3.6.0
+export release=3.6.1
 wget https://github.com/easzlab/kubeasz/releases/download/${release}/ezdown
 chmod +x ./ezdown
 cp ezdown /usr/bin
+rm -fr ezdown
 ```
-
+> 注意！！！若此前已经安装有kubeasz，同时已经运行有通过该工具部署的 k8s 集群，则需要将集群所在目录 /etc/kubeasz/clusters 的配置文件做备份，否则下载新版本kubeasz后会把原有集群配置都覆盖。
 然后使用 ezdown 下载安装集群所需要的基础镜像：
 
 ```
@@ -46,7 +47,7 @@ cp ezdown /usr/bin
 ./ezdown -X
 ```
 
-上述脚本运行成功后，所有文件（kubeasz代码、二进制、离线镜像）均已整理好放入目录`/etc/kubeasz`
+上述脚本运行成功后，所有文件（kubeasz代码、二进制、离线镜像）均已整理好放入目录`/etc/kubeasz`, 若之前安装有久版本，则需要把 /etc/kubeasz/bin下的文件删除后再重新下载
 
 ### 3. 集群管理
 
@@ -118,7 +119,7 @@ nfs_provisioner_namespace: "kube-system"
 nfs_provisioner_ver: "v4.0.2"
 nfs_storage_class: "managed-nfs-storage"
 nfs_server: "192.168.57.31"
-nfs_path: "/data/nfs"
+nfs_path: "/data/nfs" # 注意实际目录
 ```
 
 由于 node-local-dns 默认使用 8080 端口作为健康检查端口，可能会与平时开发使用的端口冲突，故需要做修改，进入集群文件夹 `/etc/kubeasz/clusters/k8s-01` 下方的 yml 文件夹，编辑文件 nodelocaldns.yaml。找到 8080 端口，修改为 6080 即可。
@@ -148,6 +149,31 @@ containerd config default > /etc/containerd/config.toml
             endpoint = ["http://192.168.57.31:8090"]
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."easzlab.io.local:5000"]
             endpoint = ["http://192.168.57.31:5000"]
+```
+
+修改完成配置以后还需要将配置放到启动程序中
+
+``` sh
+# 查看containerd服务所在位置
+[root@k8s 200G]# systemctl status containerd
+● containerd.service - containerd container runtime
+   Loaded: loaded (/etc/systemd/system/containerd.service; enabled; vendor preset: disabled)
+   Active: active (running) since Mon 2023-06-26 19:07:39 HKT; 1min 58s ago
+     Docs: https://containerd.io
+
+# 编辑服务文件， 增加 /etc/containerd/config.toml
+ vim /usr/lib/systemd/system/containerd.service
+```
+
+``` sh
+[Service]
+ExecStartPre=-/sbin/modprobe overlay
+ExecStart=/usr/bin/containerd --config /etc/containerd/config.toml
+```
+配置完成后重启 containerd
+``` sh
+systemctl daemon-reload
+systemctl restart containerd
 ```
 
 ##### 3.2.4 修改 node-dns-local 默认端口
