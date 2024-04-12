@@ -1,6 +1,6 @@
-<mxfile host="Electron" modified="2023-12-11T12:32:25.873Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.1.2 Chrome/106.0.5249.199 Electron/21.4.3 Safari/537.36" etag="m8R6m-H2NOiWo-3qyJE4" version="21.1.2" type="device" pages="3">
+<mxfile host="Electron" modified="2024-03-20T01:26:32.096Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.1.2 Chrome/106.0.5249.199 Electron/21.4.3 Safari/537.36" etag="g7tNq7Ug3gshb46k6m_k" version="21.1.2" type="device" pages="3">
   <diagram id="oXDF7HK0SayPBsa8NUOD" name="消息存储">
-    <mxGraphModel dx="989" dy="582" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="1154" dy="582" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -43,14 +43,14 @@
         <mxCell id="JcPSFcrm324DPNqzQPOj-14" value="&lt;b&gt;异步刷盘：&lt;/b&gt; 在消息追加到内存后，立即返回给消息发送端。如果开启transientStorePoolEnable，RocketMO会单独申请一个与目标物理文件(commitLog)同样大小的堆外内存，该堆外内存将使用内存锁定，确保不会被置换到虚拟内存中去，消息首先追加到堆外内存，然后提交到物理文件的内存映射中，然后刷写到磁盘。如果未开启transientStorePoolEnable，消息直接追加到物理文件直接映射文件中，然后刷写到磁盘中" style="text;whiteSpace=wrap;html=1;" parent="1" vertex="1">
           <mxGeometry x="40" y="2060" width="560" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="JcPSFcrm324DPNqzQPOj-15" value="&lt;b&gt;开启transientStorePoolEnable后异步刷盘步骤&lt;/b&gt;&lt;br&gt;1.将消息直接追加到ByteBuffer (堆外内存)&lt;br&gt;2.CommitRealTimeService线程每隔200ms将ByteBuffer新追加内容提交到MappedByteBuffer中3.MappedByteBuffer在内存中追加提交的内容，wrotePosition指针向后移动&lt;br&gt;4.commit操作成功返回，将committedPosition位置恢复&lt;br&gt;5.FlushReaTimeService线程默认每500ms将MappedByteBuffer中新追加的内存刷写到磁盘" style="text;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+        <mxCell id="JcPSFcrm324DPNqzQPOj-15" value="&lt;b&gt;开启transientStorePoolEnable后异步刷盘步骤&lt;br&gt;&lt;/b&gt;&lt;br&gt;1.将消息直接追加到ByteBuffer (堆外内存)&lt;br&gt;2.CommitRealTimeService线程每隔200ms将ByteBuffer新追加内容提交到MappedByteBuffer中3.MappedByteBuffer在内存中追加提交的内容，wrotePosition指针向后移动&lt;br&gt;4.commit操作成功返回，将committedPosition位置恢复&lt;br&gt;5.FlushReaTimeService线程默认每500ms将MappedByteBuffer中新追加的内存刷写到磁盘" style="text;whiteSpace=wrap;html=1;" parent="1" vertex="1">
           <mxGeometry x="45" y="2180" width="560" height="110" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
   <diagram id="qqRk8xbwhWIcspS_im-k" name="架构">
-    <mxGraphModel dx="1839" dy="582" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="2245" dy="703" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="vygy4gNR0mO_ytRLKUav-0" />
         <mxCell id="vygy4gNR0mO_ytRLKUav-1" parent="vygy4gNR0mO_ytRLKUav-0" />
@@ -277,8 +277,8 @@
       </root>
     </mxGraphModel>
   </diagram>
-  <diagram id="hO-BPUgs5ymzNp-SOLr6" name="master-slace读写分离">
-    <mxGraphModel dx="1434" dy="844" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+  <diagram id="hO-BPUgs5ymzNp-SOLr6" name="master-slave读写分离">
+    <mxGraphModel dx="834" dy="828" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
